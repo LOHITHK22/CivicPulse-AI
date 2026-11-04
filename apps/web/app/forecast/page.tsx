@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { PlannedPage } from "@/components/PlannedPage";
+import { ForecastLab } from "@/components/pages/ForecastLab";
+import { Loading, PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Forecast Lab" };
 
 export default function Page() {
   return (
-    <PlannedPage title="Forecast Lab" milestone={2}
-      purpose="Seven-day request-volume forecasts by category and borough."
-      scope={[
-        "Naive, seasonal-naive and rolling-average baselines",
-        "Gradient-boosted model, kept only if it beats the baselines in rolling-origin backtests",
-        "MAE, WAPE and RMSE by borough, category and season, with prediction-interval coverage",
-        "Training cutoff, model version and limitations shown with every forecast",
-      ]} />
+    <>
+      <PageHeader title="Forecast Lab"
+        subtitle="Seven-day forecasts of daily request volume by category and borough, with prediction intervals and out-of-sample backtests. Part of the Prediction Lab." />
+      <Suspense fallback={<Loading label="Loading Forecast Lab" className="h-96" />}>
+        <ForecastLab />
+      </Suspense>
+    </>
   );
 }

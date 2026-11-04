@@ -1,0 +1,58 @@
+# Milestone 2 modeling configuration. Periods are fixed in advance (not tuned on test results).
+# All dates are NYC-local calendar dates. "null" end = derived from the data at run time.
+seed: 42
+boroughs: [BRONX, BROOKLYN, MANHATTAN, QUEENS, STATEN ISLAND]
+
+forecast:
+  horizon_days: 7
+  interval_level: 0.9          # two-sided prediction interval
+  rolling_window_days: 28
+  origin_step_days: 7          # one forecast origin per week
+  min_history_days: 400        # origins need >= 1 year of history (year-ago features)
+  min_conformal_residuals: 30  # per (category, horizon); otherwise no interval is reported
+  validation: {start: "2025-05-01", end: "2025-10-31"}   # target dates; model selection only
+  test: {start: "2025-11-01", end: null}                 # target dates; reported, never tuned on
+  lgbm:
+    num_leaves: 15
+    learning_rate: 0.05
+    n_estimators: 300
+    min_child_samples: 20
+    subsample: 0.8
+    subsample_freq: 1
+    colsample_bytree: 0.8
+    reg_lambda: 1.0
+
+delay_risk:
+  threshold_days: 7
+  embargo_days: 7              # gap between splits so training labels were knowable before the next split
+  train: {start: "2023-01-01", end: "2025-06-30"}
+  validation: {start: "2025-07-01", end: "2025-12-31"}
+  test: {start: "2026-01-01", end: null}                 # null -> label-maturity cutoff
+  min_category_count: 200      # rarer categorical levels collapse to "__other__" (train counts only)
+  permutation_sample: 100000
+  permutation_repeats: 3
+  lgbm:
+    num_leaves: 63
+    learning_rate: 0.05
+    n_estimators: 1500
+    early_stopping_rounds: 50
+    min_child_samples: 100
+    subsample: 0.8
+    subsample_freq: 1
+    colsample_bytree: 0.8
+    reg_lambda: 1.0
+  logreg:
+    C: 1.0
+    max_iter: 300
+
+anomaly:
+  baseline_weeks: 8            # expected = median of the same weekday over the previous 8 weeks
+  mad_window_days: 56          # robust scale from the previous 56 days of residuals
+  z_threshold: 3.5
+  min_abs_deviation: 5         # ignore deviations smaller than this many requests
+  evaluation:
+    start: "2024-01-01"
+    injections_per_series: 12
+    min_gap_days: 21
+    magnitudes: [0.25, 0.5, 1.0, 2.0]   # spike = +m x expected; drop = -min(m, 0.9) x expected
+    thresholds: [3.0, 3.5, 4.0]

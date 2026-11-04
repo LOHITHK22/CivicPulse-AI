@@ -143,3 +143,14 @@ def sample_warehouse(tmp_path_factory: pytest.TempPathFactory) -> DataPaths:
     c = load_ingestion_config()
     build_warehouse(c, p, snapshot_at=dt.datetime(2026, 11, 3, 12, 0, tzinfo=dt.UTC))
     return p
+
+
+@pytest.fixture(scope="session")
+def sample_models(sample_warehouse: DataPaths) -> DataPaths:
+    """Train every model on the committed real sample with the CI config (smoke scale)."""
+    from civicpulse_modeling.config import load_modeling_config
+    from civicpulse_modeling.pipeline import train_all
+
+    cfg_path = REPO / "configs" / "modeling.ci.yaml"
+    train_all(load_modeling_config(cfg_path), sample_warehouse, config_path=cfg_path, run_id="sample-run")
+    return sample_warehouse

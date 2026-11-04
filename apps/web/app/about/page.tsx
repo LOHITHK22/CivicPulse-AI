@@ -10,13 +10,14 @@ export default function Page() {
       <PageHeader title="About CivicPulse AI"
         subtitle="A personal engineering portfolio project: predictive city operations intelligence on public NYC 311 data." />
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="What it does today (Milestone 1)">
+        <Card title="What it does today (Milestones 1–2)">
           <ul className="list-disc space-y-1.5 pl-5 text-sm text-ink-2">
             <li>Extracts NYC 311 residential-noise and heat/hot-water requests from the Socrata API using keyset pagination, retries, checkpoints and incremental watermarks.</li>
             <li>Builds cleaned, typed Parquet tables with DuckDB, with data-quality rules and a full audit of each run.</li>
             <li>Serves reproducible metrics through a read-only FastAPI service, used by this dashboard.</li>
+            <li>Prediction Lab: seven-day demand forecasts with prediction intervals, 7-day closure-delay risk and anomaly detection, each evaluated out-of-sample against simple baselines. Models are trained offline; the API only serves their stored outputs.</li>
           </ul>
-          <p className="mt-3 text-sm text-ink-3">Forecasting, delay risk, anomaly detection, the MCP server and the AI analyst are planned for later milestones and are not implemented yet.</p>
+          <p className="mt-3 text-sm text-ink-3">The MCP server, AI analyst and geographic views are planned for later milestones and are not implemented yet.</p>
         </Card>
         <Card title="Data source & attribution">
           <p className="text-sm text-ink-2">

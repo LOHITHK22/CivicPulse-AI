@@ -13,6 +13,7 @@ from functools import lru_cache
 from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi import Path as FastAPIPath
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
@@ -29,12 +30,13 @@ from civicpulse_analytics.models import (
     RequestPage,
     Series,
 )
+from civicpulse_analytics.predictions import PredictionService
 from civicpulse_api.ratelimit import TokenBucketLimiter
 from civicpulse_shared.config import get_settings
 from civicpulse_shared.logging import configure_logging, log
 
 logger = logging.getLogger("civicpulse_api")
-API_VERSION = "0.1.0"
+API_VERSION = "0.2.0"
 MAX_URL_LENGTH = 4096
 
 
@@ -67,7 +69,18 @@ def get_filters(
         ) from exc
 
 
+@lru_cache(maxsize=1)
+def get_predictions() -> PredictionService:
+    return PredictionService(get_settings().data_dir)
+
+
 FiltersDep = Annotated[Filters, Depends(get_filters)]
+PredDep = Annotated[PredictionService, Depends(get_predictions)]
+CategoryQ = Annotated[str, Query(min_length=1, max_length=64, pattern=r"^[a-z_]+$")]
+BoroughQ = Annotated[str, Query(min_length=1, max_length=20, pattern=r"^[A-Z ]+$")]
+OptCategoryQ = Annotated[str | None, Query(max_length=64, pattern=r"^[a-z_]+$")]
+OptBoroughQ = Annotated[str | None, Query(max_length=20, pattern=r"^[A-Z ]+$")]
+ModelName = Annotated[str, FastAPIPath(pattern=r"^(forecast|delay_risk|anomaly)$")]
 ServiceDep = Annotated[AnalyticsService, Depends(get_service)]
 
 
@@ -89,8 +102,9 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="CivicPulse AI — Analytics API",
         version=API_VERSION,
-        description="Read-only analytics over NYC 311 service requests (NYC Open Data erm2-nwe9). "
-        "Data is a versioned snapshot; see /api/v1/quality for freshness.",
+        description="Read-only analytics and precomputed model outputs over NYC 311 service requests "
+        "(NYC Open Data erm2-nwe9). Data is a versioned snapshot; see /api/v1/quality for freshness. "
+        "Models are trained offline; no endpoint trains or executes a model.",
     )
     limiter = TokenBucketLimiter(settings.api_rate_limit_per_minute)
     app.add_middleware(
@@ -234,6 +248,96 @@ def create_app() -> FastAPI:
     @app.get("/api/v1/quality", response_model=QualityReport, tags=["quality"])
     def quality(svc: ServiceDep) -> QualityReport:
         return svc.quality_report()
+
+    # ---- models: metadata, evaluation, explanations (read-only, precomputed) -------------
+    @app.get("/api/v1/models", tags=["models"])
+    def models(pred: PredDep) -> dict[str, Any]:
+        """Registry of the current model run: versions, data build, periods, selected models."""
+        return pred.registry()
+
+    @app.get("/api/v1/models/{name}/evaluation", tags=["models"])
+    def model_evaluation(name: ModelName, pred: PredDep) -> dict[str, Any]:
+        """Full offline evaluation (backtests / held-out test metrics) for one model family."""
+        return pred.evaluation(name)
+
+    @app.get("/api/v1/models/{name}/explanations", tags=["models"])
+    def model_explanations(name: ModelName, pred: PredDep) -> dict[str, Any]:
+        """Global feature importance (permutation, gain, coefficients). Associations, not causes."""
+        return pred.explanations(name)
+
+    # ---- predictions --------------------------------------------------------------
+    @app.get("/api/v1/predictions/forecast", tags=["predictions"])
+    def forecast(
+        pred: PredDep,
+        category: CategoryQ,
+        borough: BoroughQ,
+        history_days: Annotated[int, Query(ge=7, le=365)] = 56,
+    ) -> dict[str, Any]:
+        """Seven-day forecast with prediction intervals for one category x borough, plus recent history."""
+        return pred.forecast(category, borough, history_days)
+
+    @app.get("/api/v1/predictions/forecast/backtest", tags=["predictions"])
+    def forecast_backtest(
+        pred: PredDep,
+        category: CategoryQ,
+        borough: BoroughQ,
+        horizon: Annotated[int, Query(ge=1, le=7)] = 1,
+        model: Annotated[str | None, Query(pattern=r"^(naive|seasonal_naive|rolling_mean|lightgbm)$")] = None,
+    ) -> dict[str, Any]:
+        """Out-of-sample backtest predictions vs actuals (validation + test origins)."""
+        return pred.backtest(category, borough, horizon, model)
+
+    @app.get("/api/v1/predictions/delay-risk", tags=["predictions"])
+    def delay_risk(
+        pred: PredDep,
+        category: OptCategoryQ = None,
+        borough: OptBoroughQ = None,
+        min_risk: Annotated[float, Query(ge=0, le=1)] = 0.0,
+        limit: Annotated[int, Query(ge=1, le=100)] = 25,
+    ) -> dict[str, Any]:
+        """Highest-risk recent requests whose 7-day outcome is not yet known."""
+        return pred.delay_risk_list(category, borough, min_risk, limit)
+
+    @app.get("/api/v1/predictions/delay-risk/summary", tags=["predictions"])
+    def delay_risk_summary(pred: PredDep) -> dict[str, Any]:
+        return pred.delay_risk_summary()
+
+    @app.get("/api/v1/predictions/delay-risk/{unique_key}", tags=["predictions"])
+    def delay_risk_request(
+        pred: PredDep, unique_key: Annotated[str, FastAPIPath(pattern=r"^[0-9]{1,12}$")]
+    ) -> dict[str, Any]:
+        r = pred.delay_risk_request(unique_key)
+        if r is None:
+            raise HTTPException(404, "request is not in the scored set (test period or recent requests)")
+        return r
+
+    @app.get("/api/v1/anomalies", tags=["predictions"])
+    def anomalies(
+        pred: PredDep,
+        category: OptCategoryQ = None,
+        borough: Annotated[str | None, Query(max_length=20, pattern=r"^[A-Z ]+$")] = None,
+        direction: Annotated[str | None, Query(pattern=r"^(spike|drop)$")] = None,
+        start: dt.date | None = None,
+        end: dt.date | None = None,
+        limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    ) -> dict[str, Any]:
+        """Detected (unverified) anomalies, newest first."""
+        if start and end and end < start:
+            raise HTTPException(422, "end must be on or after start")
+        return pred.anomalies(category, borough, direction, start, end, limit)
+
+    @app.get("/api/v1/anomalies/series", tags=["predictions"])
+    def anomaly_series(
+        pred: PredDep,
+        category: CategoryQ,
+        borough: BoroughQ,
+        start: dt.date | None = None,
+        end: dt.date | None = None,
+    ) -> dict[str, Any]:
+        """Daily actual vs expected counts and anomaly scores for one series (max 400 days)."""
+        if start and end and end < start:
+            raise HTTPException(422, "end must be on or after start")
+        return pred.anomaly_series(category, borough, start, end)
 
     return app
 

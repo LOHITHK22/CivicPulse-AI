@@ -1,0 +1,78 @@
+# SMOKE/CI configuration: same code paths as configs/modeling.yaml with smaller models, fewer
+# origins and shorter evaluation windows, so tests and CI can train end-to-end on the small committed
+# sample in seconds. Metrics produced with this file are NOT reported anywhere.
+seed: 42
+boroughs:
+- BRONX
+- BROOKLYN
+- MANHATTAN
+- QUEENS
+- STATEN ISLAND
+forecast:
+  horizon_days: 7
+  interval_level: 0.9
+  rolling_window_days: 28
+  origin_step_days: 14
+  min_history_days: 400
+  min_conformal_residuals: 10
+  validation:
+    start: '2025-08-01'
+    end: '2025-10-31'
+  test:
+    start: '2026-08-01'
+    end: null
+  lgbm:
+    num_leaves: 15
+    learning_rate: 0.05
+    n_estimators: 25
+    min_child_samples: 20
+    subsample: 0.8
+    subsample_freq: 1
+    colsample_bytree: 0.8
+    reg_lambda: 1.0
+delay_risk:
+  threshold_days: 7
+  embargo_days: 7
+  train:
+    start: '2023-01-01'
+    end: '2025-06-30'
+  validation:
+    start: '2025-07-01'
+    end: '2025-12-31'
+  test:
+    start: '2026-01-01'
+    end: null
+  min_category_count: 20
+  permutation_sample: 2000
+  permutation_repeats: 1
+  lgbm:
+    num_leaves: 63
+    learning_rate: 0.05
+    n_estimators: 40
+    early_stopping_rounds: 50
+    min_child_samples: 100
+    subsample: 0.8
+    subsample_freq: 1
+    colsample_bytree: 0.8
+    reg_lambda: 1.0
+  logreg:
+    C: 1.0
+    max_iter: 300
+anomaly:
+  baseline_weeks: 8
+  mad_window_days: 56
+  z_threshold: 3.5
+  min_abs_deviation: 5
+  evaluation:
+    start: '2024-01-01'
+    injections_per_series: 6
+    min_gap_days: 21
+    magnitudes:
+    - 0.25
+    - 0.5
+    - 1.0
+    - 2.0
+    thresholds:
+    - 3.0
+    - 3.5
+    - 4.0

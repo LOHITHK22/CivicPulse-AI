@@ -4,15 +4,18 @@ ifeq ($(OS),Windows_NT)
 PY := .venv/Scripts/python
 endif
 
-.PHONY: setup extract incremental build sample-warehouse api web test test-live lint e2e check
+.PHONY: setup extract backfill-history incremental build manifest models sample-warehouse api web test test-live lint e2e check
 
 setup:            ## create venv, install Python + web deps
 	python -m venv .venv
-	$(PY) -m pip install -e ".[dev]"
+	$(PY) -m pip install -e ".[dev,ml]"
 	cd apps/web && npm ci
 
-extract:          ## bounded 12-month backfill from the live NYC Open Data API (~5 min)
+extract:          ## bounded backfill of the configured window from the live NYC Open Data API
 	$(PY) -m civicpulse_ingestion.cli extract --mode backfill
+
+backfill-history: ## M2: bounded half-year backfills 2023-01 -> 2025-11 (resumable, skips finished chunks)
+	PY=$(PY) bash scripts/backfill_history.sh
 
 incremental:      ## incremental update using the stored watermark + lookback
 	$(PY) -m civicpulse_ingestion.cli extract --mode incremental
@@ -20,8 +23,14 @@ incremental:      ## incremental update using the stored watermark + lookback
 build:            ## rebuild warehouse tables + quality report from data/raw
 	$(PY) -m civicpulse_ingestion.cli build
 
-sample-warehouse: ## offline: build a warehouse from the committed real sample into .sample-data
-	$(PY) scripts/build_sample_warehouse.py --data-dir .sample-data
+manifest:         ## write data/state/manifest.json (+ docs copy) and re-count every backfill at the source
+	$(PY) -m civicpulse_ingestion.cli manifest --verify-source-counts --out docs/data/manifest.json
+
+models:           ## train + evaluate all M2 models from the current warehouse (offline)
+	$(PY) -m civicpulse_modeling.cli train
+
+sample-warehouse: ## offline: warehouse + smoke-scale models from the committed real sample into .sample-data
+	$(PY) scripts/build_sample_warehouse.py --data-dir .sample-data --with-models
 
 api:              ## run the analytics API on :8000
 	$(PY) -m uvicorn civicpulse_api.main:app --host 127.0.0.1 --port 8000

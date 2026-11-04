@@ -36,8 +36,8 @@ test.describe("navigation", () => {
   });
 
   test("unbuilt pages say so and show no fabricated results", async ({ page }) => {
-    await page.goto("/forecast");
-    await expect(page.getByRole("heading", { name: "Planned: Milestone 2" })).toBeVisible();
+    await page.goto("/analyst");
+    await expect(page.getByRole("heading", { name: "Planned: Milestone 3" })).toBeVisible();
     await expect(page.getByText(/no sample, placeholder or simulated results/)).toBeVisible();
   });
 });
@@ -162,7 +162,7 @@ test.describe("data quality", () => {
 });
 
 test.describe("accessibility", () => {
-  for (const path of ["/", "/explorer", "/quality", "/about"]) {
+  for (const path of ["/", "/explorer", "/quality", "/about", "/forecast", "/delay-risk", "/anomalies", "/models"]) {
     test(`no serious or critical axe violations on ${path}`, async ({ page }) => {
       await page.goto(path);
       await page.getByRole("heading", { level: 1 }).waitFor();

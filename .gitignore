@@ -23,6 +23,7 @@ data/processed/
 data/features/
 data/state/
 data/warehouse/
+data/models/
 *.duckdb
 *.duckdb.wal
 # The small, reviewed real-data sample IS committed:

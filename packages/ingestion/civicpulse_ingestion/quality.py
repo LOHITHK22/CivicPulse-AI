@@ -207,6 +207,24 @@ def run_quality_checks(
             json.dumps({"source_rows_updated_at": rows_updated, "lag_hours": round(src_lag, 1)}),
         )
 
+        # The metadata timestamp can move without new rows being published (observed 2026-11-04),
+        # so also check the newest row version actually received.
+        newest_epoch = _scalar(con, "SELECT epoch(max(source_updated_at)) FROM fact_service_requests")
+        if newest_epoch is not None:
+            newest = dt.datetime.fromtimestamp(float(newest_epoch), dt.UTC)
+            chk = checked if checked.tzinfo else checked.replace(tzinfo=dt.UTC)
+            row_lag = (chk - newest).total_seconds() / 3600
+            add(
+                "DQ042",
+                "Newest record version (:updated_at) received within 48h of the extraction check",
+                "freshness",
+                "flag",
+                int(row_lag > 48),
+                1,
+                0.0,
+                json.dumps({"newest_row_updated_at": newest.isoformat(), "lag_hours": round(row_lag, 1)}),
+            )
+
     # --- Category stability ---------------------------------------------------------
     for c in cfg.categories:
         recent = int(

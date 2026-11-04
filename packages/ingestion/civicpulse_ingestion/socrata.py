@@ -140,6 +140,13 @@ class SocrataClient:
             raise SocrataError(f"unexpected payload type {type(data).__name__}")
         return PageResult(records=data, url=self.source.resource_url, attempts=attempts, elapsed_s=elapsed)
 
+    def count(self, where: str) -> int:
+        """Server-side row count for a filter (used to verify that an extraction is complete)."""
+        data, _, _ = self._get(self.source.resource_url, {"$select": "count(*) AS n", "$where": where})
+        if not isinstance(data, list) or not data or "n" not in data[0]:
+            raise SocrataError("unexpected count payload")
+        return int(data[0]["n"])
+
     def fetch_metadata(self) -> dict[str, Any]:
         data, _, _ = self._get(self.source.metadata_url)
         if not isinstance(data, dict):

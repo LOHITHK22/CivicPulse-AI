@@ -39,6 +39,7 @@ def cmd_extract(args: argparse.Namespace) -> int:
             end=dt.date.fromisoformat(args.end) if args.end else None,
             resume=not args.no_resume,
             max_pages=args.max_pages,
+            skip_if_succeeded=args.skip_if_succeeded,
         )
     print(
         json.dumps(
@@ -115,6 +116,38 @@ def cmd_sample(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_manifest(args: argparse.Namespace) -> int:
+    """Write data/state/manifest.json (and optionally a copy elsewhere, e.g. docs/data/)."""
+    from civicpulse_ingestion.manifest import build_manifest
+    from civicpulse_shared.paths import atomic_write_json
+
+    cfg = load_ingestion_config(Path(args.config) if args.config else None)
+    paths = _paths(args)
+    if args.verify_source_counts:
+        with SocrataClient(cfg.source, cfg.http, app_token=get_settings().socrata_app_token) as client:
+            manifest = build_manifest(paths, client)
+    else:
+        manifest = build_manifest(paths)
+    manifest["dataset_id"] = cfg.source.dataset_id
+    atomic_write_json(paths.state / "manifest.json", manifest)
+    if args.out:
+        atomic_write_json(Path(args.out), manifest)
+    print(
+        json.dumps(
+            {
+                "backfill_coverage": manifest["backfill_coverage"],
+                "totals": manifest["totals"],
+                "warehouse": manifest["warehouse"],
+            },
+            indent=2,
+        )
+    )
+    mismatched = [r["run_id"] for r in manifest["runs"] if r.get("source_count_matches") is False]
+    if mismatched:
+        print(f"source count changed since extraction for: {mismatched}", file=sys.stderr)
+    return 0
+
+
 def cmd_duckdb(args: argparse.Namespace) -> int:
     """Create a DuckDB file with views over the Parquet tables (for ad-hoc SQL exploration)."""
     paths = _paths(args)
@@ -142,6 +175,9 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--end", help="created_date end, exclusive (backfill only)")
     e.add_argument("--max-pages", type=int, help="stop after N pages (run is left 'paused')")
     e.add_argument("--no-resume", action="store_true", help="start a new run even if one is resumable")
+    e.add_argument(
+        "--skip-if-succeeded", action="store_true", help="backfill: do nothing if this exact window already succeeded"
+    )
     e.set_defaults(func=cmd_extract)
 
     sub.add_parser("build", help="rebuild warehouse tables + quality report").set_defaults(func=cmd_build)
@@ -149,6 +185,10 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("sample", help="write the committed real-data sample from local raw pages")
     s.add_argument("--per-stratum", type=int, default=8)
     s.set_defaults(func=cmd_sample)
+    m = sub.add_parser("manifest", help="write the extraction manifest (checksums, counts, coverage)")
+    m.add_argument("--verify-source-counts", action="store_true", help="re-count each backfill window at the source")
+    m.add_argument("--out", help="also write the manifest to this path")
+    m.set_defaults(func=cmd_manifest)
     sub.add_parser("duckdb", help="create data/warehouse/civicpulse.duckdb views").set_defaults(func=cmd_duckdb)
 
     args = p.parse_args(argv)

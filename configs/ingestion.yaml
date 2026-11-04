@@ -43,8 +43,10 @@ categories:
     complaint_types: ["HEAT/HOT WATER"]
 
 # Bounded historical window (created_date, NYC local floating time, [start, end)).
+# M1 loaded 2025-11-01..2026-11-01; M2 extended start to 2023-01-01 via separate bounded
+# half-year runs (see docs/data/MANIFEST.md). Earlier raw pages are never rewritten.
 backfill:
-  start: "2025-11-01"
+  start: "2023-01-01"
   end: "2026-11-01"
 
 http:

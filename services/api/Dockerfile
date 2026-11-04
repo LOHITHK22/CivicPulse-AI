@@ -1,25 +1,39 @@
-# CivicPulse AI — analytics API image.
+# CivicPulse AI — analytics + predictions API image.
 # Build from the repo root:  docker build -f services/api/Dockerfile -t civicpulse-api .
-# STATUS: written but NOT yet built/verified (Docker daemon unavailable during Milestone 1).
-FROM python:3.12-slim AS base
+#
+# Stage 1 builds the warehouse from the committed real-data sample and trains smoke-scale models
+# (needs the `ml` extra). Stage 2 ships only the API runtime: no LightGBM/scikit-learn, because the
+# API serves stored model outputs and never trains or executes models.
+FROM python:3.12-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+# LightGBM needs the OpenMP runtime.
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-
 COPY pyproject.toml README.md ./
 COPY packages ./packages
 COPY services/api ./services/api
 COPY configs ./configs
 COPY scripts ./scripts
 COPY data/samples ./data/samples
+RUN pip install ".[ml]" \
+ && python scripts/build_sample_warehouse.py --data-dir /app/sample-data --with-models
+
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+WORKDIR /app
+COPY pyproject.toml README.md ./
+COPY packages ./packages
+COPY services/api ./services/api
+COPY configs ./configs
 RUN pip install . \
- && python scripts/build_sample_warehouse.py --data-dir /app/sample-data \
- && useradd --system --uid 10001 app \
- && chown -R app /app
+ && useradd --system --uid 10001 app
+COPY --from=builder --chown=app /app/sample-data /app/sample-data
 
 USER app
 # Default to the bundled real-data sample; mount a full warehouse at /app/data and set
-# CIVICPULSE_DATA_DIR=/app/data to serve the complete snapshot.
+# CIVICPULSE_DATA_DIR=/app/data to serve the complete snapshot (and its trained models).
 ENV CIVICPULSE_DATA_DIR=/app/sample-data
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "civicpulse"
-version = "0.1.0"
-description = "CivicPulse AI — predictive city operations intelligence on NYC 311 data (Milestone 1: ingestion, warehouse, analytics API)"
+version = "0.2.0"
+description = "CivicPulse AI — predictive city operations intelligence on NYC 311 data (ingestion, warehouse, analytics API, predictive models)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -23,6 +23,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Offline model training only. The API serves precomputed outputs and never imports these.
+ml = [
+  "lightgbm>=4.5",
+  "scikit-learn>=1.5",
+  "numpy>=1.26",
+  "scipy>=1.11",
+]
 dev = [
   "pytest>=8",
   "pytest-cov",
@@ -35,9 +42,10 @@ dev = [
 
 [project.scripts]
 civicpulse = "civicpulse_ingestion.cli:main"
+civicpulse-model = "civicpulse_modeling.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["packages/shared", "packages/ingestion", "packages/analytics", "services/api"]
+where = ["packages/shared", "packages/ingestion", "packages/analytics", "packages/modeling", "services/api"]
 include = ["civicpulse_*"]
 
 [tool.pytest.ini_options]
@@ -61,19 +69,21 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["civicpulse_shared", "civicpulse_ingestion", "civicpulse_analytics", "civicpulse_api", "conftest"]
+known-first-party = ["civicpulse_shared", "civicpulse_ingestion", "civicpulse_analytics", "civicpulse_modeling", "civicpulse_api", "conftest"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S", "B"]
 "tests/**" = ["S", "B"]
 "conftest.py" = ["S"]
 "packages/analytics/civicpulse_analytics/service.py" = ["RUF001"]  # en-dashes in display labels are intentional
+# Modeling code uses standard math notation: X (design matrix), T (origin), module aliases F/D/M/A.
+"packages/modeling/**" = ["N803", "N806", "N812"]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 ignore_missing_imports = true
 exclude = ["tests/", "build/"]
-files = ["packages/shared/civicpulse_shared", "packages/ingestion/civicpulse_ingestion", "packages/analytics/civicpulse_analytics", "services/api/civicpulse_api"]
-mypy_path = ["packages/shared", "packages/ingestion", "packages/analytics", "services/api"]
+files = ["packages/shared/civicpulse_shared", "packages/ingestion/civicpulse_ingestion", "packages/analytics/civicpulse_analytics", "packages/modeling/civicpulse_modeling", "services/api/civicpulse_api"]
+mypy_path = ["packages/shared", "packages/ingestion", "packages/analytics", "packages/modeling", "services/api"]
 explicit_package_bases = true

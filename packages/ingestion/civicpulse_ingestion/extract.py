@@ -101,6 +101,14 @@ def find_resumable(paths: DataPaths, mode: str, where: str) -> RunState | None:
     return None
 
 
+def find_succeeded(paths: DataPaths, mode: str, where: str) -> RunState | None:
+    """Latest succeeded run with exactly this filter (used to make chunked backfills idempotent)."""
+    for r in reversed(list_runs(paths)):
+        if r.mode == mode and r.where == where and r.status == "succeeded":
+            return r
+    return None
+
+
 def read_watermark(paths: DataPaths) -> dt.datetime | None:
     if not paths.watermark_file.exists():
         return None
@@ -161,6 +169,7 @@ def run_extraction(
     resume: bool = True,
     max_pages: int | None = None,
     check_schema: bool = True,
+    skip_if_succeeded: bool = False,
 ) -> RunState:
     """Run (or resume) one extraction. Returns the final run state; raises on failure."""
     paths.ensure()
@@ -175,6 +184,12 @@ def run_extraction(
         updated_after = wm - dt.timedelta(hours=cfg.incremental.lookback_hours)
         end = None  # incremental picks up new requests too
     where = build_where(cfg, start=start, end=end, updated_after=updated_after)
+
+    if skip_if_succeeded and mode == "backfill":
+        done = find_succeeded(paths, mode, where)
+        if done is not None:
+            log(logger, logging.INFO, "chunk already extracted; skipping", run_id=done.run_id, where=where)
+            return done
 
     state = find_resumable(paths, mode, where) if resume else None
     if state is not None:

@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { PlannedPage } from "@/components/PlannedPage";
+import { Anomalies } from "@/components/pages/Anomalies";
+import { Loading, PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Anomaly Center" };
 
 export default function Page() {
   return (
-    <PlannedPage title="Anomaly Center" milestone={2}
-      purpose="Statistically unusual changes in complaint volume by category and area."
-      scope={[
-        "Interpretable methods: seasonal baselines, robust z-scores and median absolute deviation",
-        "Actual vs expected counts, anomaly score and method for each flag",
-        "Evaluation on clearly labeled synthetic injected anomalies",
-        "No causal claims without supporting evidence",
-      ]} />
+    <>
+      <PageHeader title="Anomaly Center"
+        subtitle="Days when request volume was unusually high or low for that weekday, by category and borough. Part of the Prediction Lab." />
+      <Suspense fallback={<Loading label="Loading Anomaly Center" className="h-96" />}>
+        <Anomalies />
+      </Suspense>
+    </>
   );
 }
