@@ -66,6 +66,14 @@ def _clean(obj: Any) -> Any:
     return obj
 
 
+def _span(split: Any) -> dict[str, str | None]:
+    """JSON-friendly ``{start, end}`` for a configured date span (end ``None`` = open-ended)."""
+    return {
+        "start": split.start.isoformat() if split.start else None,
+        "end": split.end.isoformat() if split.end else None,
+    }
+
+
 def _desc(rows: list[dict[str, Any]], key: str, absolute: bool = False) -> list[dict[str, Any]]:
     """Sort rows by a numeric field, largest (or largest absolute) first."""
     return sorted(rows, key=lambda r: -(abs(r[key]) if absolute else r[key]))
@@ -326,9 +334,9 @@ def run_delay_risk(cfg: ModelingConfig, paths: DataPaths, info: DataInfo, out: P
         "snapshot": snap.to_dict(),
         "splits": sizes,
         "split_rules": {
-            "train": dc.train,
-            "validation": dc.validation,
-            "test": dc.test,
+            "train": _span(dc.train),
+            "validation": _span(dc.validation),
+            "test": _span(dc.test),
             "embargo_days": dc.embargo_days,
             "excluded": "immature (created after maturity cutoff), label_unknown (invalid closure), "
             "embargo (gap between splits)",

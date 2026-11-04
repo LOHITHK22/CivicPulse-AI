@@ -1,5 +1,18 @@
 # Deployment
 
+## Milestone 2 status
+- **Docker: verified locally on 2026-11-04** (Docker Desktop 27.5.1).
+  - `services/api/Dockerfile` is multi-stage. The builder installs `.[ml]` and trains
+    smoke-scale models on the sample. The runtime has core dependencies only and runs as a
+    non-root user.
+  - `docker compose up --build` serves the web app with the API behind its proxy.
+  - Images set `CIVICPULSE_REPO_ROOT=/app`. A non-editable install cannot locate `configs/`
+    from the package path.
+- **Models:** `civicpulse-model train` needs the `ml` extra (LightGBM needs OpenMP:
+  `libgomp1` on Debian). The API serves precomputed outputs from `data/models/` and never
+  trains.
+- **Public demo:** still not deployed, and no cloud resources have been created.
+
 ## Milestone 1 status
 - **Local developer mode: working and verified** (Windows 11, Python 3.12, Node 22).
 - **Docker**: `services/api/Dockerfile`, `apps/web/Dockerfile` and `docker-compose.yml` are written

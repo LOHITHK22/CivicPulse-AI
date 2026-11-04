@@ -53,7 +53,7 @@ export function DelayRisk() {
         <Section state={list}>
           {(l) => l.rows.length === 0 ? <EmptyState message="No scored recent requests match." /> : (
             <div className="grid gap-6 xl:grid-cols-5">
-              <div className="overflow-x-auto xl:col-span-3">
+              <div className="min-w-0 overflow-x-auto xl:col-span-3" tabIndex={0} role="region" aria-label="Scrollable table">
                 <table className="w-full text-left text-xs">
                   <caption className="sr-only">Highest-risk recent requests</caption>
                   <thead className="text-ink-3"><tr>{["Request", "Created", "Category", "Borough", "Descriptor", "Risk"].map((h) =>
@@ -76,7 +76,7 @@ export function DelayRisk() {
                 </table>
                 <p className="mt-2 text-[11px] text-ink-3">Showing {l.rows.length} of {fmtInt(l.total)} scored recent requests.</p>
               </div>
-              <div className="xl:col-span-2">
+              <div className="min-w-0 xl:col-span-2">
                 {selected ? <RiskExplanation id={selected} /> :
                   <EmptyState message="Select a request to see its explanation." />}
               </div>
@@ -85,7 +85,7 @@ export function DelayRisk() {
         </Section>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid gap-6 [&>*]:min-w-0 xl:grid-cols-2">
         <Card id="cal" title="Calibration on the held-out test period"
           subtitle="Each point is 10% of test requests: mean predicted risk vs share actually not closed within 7 days. On the dashed line = well calibrated.">
           <Section state={ev}>
@@ -98,7 +98,7 @@ export function DelayRisk() {
         </Card>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid gap-6 [&>*]:min-w-0 xl:grid-cols-2">
         <Card id="seg" title="Test performance by segment" subtitle="Selected model; segments with at least 200 test requests">
           <Section state={ev}>
             {(e) => {
@@ -107,9 +107,13 @@ export function DelayRisk() {
                 ...t.by_category.map((r) => [CATEGORY_LABEL[r.category_key] ?? r.category_key, r]),
                 ...t.by_borough.map((r) => [titleCase(r.borough), r]),
               ] as [string, typeof t.overall][];
-              return <DataTable caption="Performance by segment" head={["Segment", "Requests", "Base rate", "PR-AUC", "ROC-AUC", "Brier", "ECE"]}
-                rows={rows.map(([name, r]) => [name, fmtInt(r.n), fmtPct(r.positive_rate), r.pr_auc?.toFixed(3) ?? "—",
-                  r.roc_auc?.toFixed(3) ?? "—", r.brier.toFixed(3), r.ece?.toFixed(3) ?? "—"])} />;
+              return (
+                <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scrollable table">
+                  <DataTable caption="Performance by segment" head={["Segment", "Requests", "Base rate", "PR-AUC", "ROC-AUC", "Brier", "ECE"]}
+                    rows={rows.map(([name, r]) => [name, fmtInt(r.n), fmtPct(r.positive_rate, 2), r.pr_auc?.toFixed(4) ?? "—",
+                      r.roc_auc?.toFixed(3) ?? "—", r.brier.toFixed(3), r.ece?.toFixed(3) ?? "—"])} />
+                </div>
+              );
             }}
           </Section>
         </Card>

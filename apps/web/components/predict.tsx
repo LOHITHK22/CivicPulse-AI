@@ -173,19 +173,33 @@ export function ImportanceBars({ rows, label, valueLabel, format = (v: number) =
 }
 
 /** Reliability diagram: mean predicted vs observed rate per equal-frequency bin, with the diagonal. */
+/** Smallest "nice" upper bound (…, 2%, 5%, 10%, 20%, 50%, 100%) covering every value. */
+export function calibrationTop(values: number[]): number {
+  const max = Math.max(0, ...values.filter((v) => Number.isFinite(v)));
+  for (const t of [0.01, 0.02, 0.05, 0.1, 0.2, 0.5]) if (max <= t) return t;
+  return 1;
+}
+
 export function CalibrationChart({ series, label }: {
   series: { model: string; bins: { mean_predicted: number; observed_rate: number; n: number }[] }[]; label: string;
 }) {
+  // Both axes share one scale (so the diagonal still means "calibrated"), zoomed to the data:
+  // with low base rates a fixed 0–100% axis squeezes every point into the corner.
+  const top = calibrationTop(series.flatMap((s) => s.bins.flatMap((b) => [b.mean_predicted, b.observed_rate])));
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * top);
+  // Enough decimals that every tick (multiples of top/4) is printed exactly, e.g. 2.5%, 7.5%.
+  const exact = (d: number) => ticks.every((t) => Math.abs(t * 100 * 10 ** d - Math.round(t * 100 * 10 ** d)) < 1e-6);
+  const digits = [0, 1, 2].find(exact) ?? 2;
   const chart = (
     <ResponsiveContainer width="100%" height="100%">
       <ComposedChart margin={{ top: 4, right: 12, bottom: 16, left: -4 }}>
         <CartesianGrid {...GRID} vertical />
-        <XAxis type="number" dataKey="mean_predicted" domain={[0, 1]} ticks={[0, 0.25, 0.5, 0.75, 1]}
-          tickFormatter={(v) => fmtPct(Number(v), 0)} {...AXIS}
+        <XAxis type="number" dataKey="mean_predicted" domain={[0, top]} ticks={ticks} allowDataOverflow
+          tickFormatter={(v) => fmtPct(Number(v), digits)} {...AXIS}
           label={{ value: "Mean predicted risk", position: "insideBottom", offset: -10, fill: "var(--text-muted)", fontSize: 11 }} />
-        <YAxis type="number" dataKey="observed_rate" domain={[0, 1]} ticks={[0, 0.25, 0.5, 0.75, 1]} width={48}
-          tickFormatter={(v) => fmtPct(Number(v), 0)} {...AXIS} />
-        <ReferenceLine segment={[{ x: 0, y: 0 }, { x: 1, y: 1 }]} stroke="var(--border-strong)" strokeDasharray="4 4" />
+        <YAxis type="number" dataKey="observed_rate" domain={[0, top]} ticks={ticks} width={52} allowDataOverflow
+          tickFormatter={(v) => fmtPct(Number(v), digits)} {...AXIS} />
+        <ReferenceLine segment={[{ x: 0, y: 0 }, { x: top, y: top }]} stroke="var(--border-strong)" strokeDasharray="4 4" />
         <Tooltip {...TOOLTIP} formatter={(v, n) => [fmtPct(Number(v)), String(n)]} />
         <Legend {...LEGEND} formatter={legendText(modelLabel)} />
         {series.map((s) => (

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -10,7 +11,24 @@ import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+
+def _repo_root() -> Path:
+    """Directory holding ``configs/``.
+
+    Order: ``CIVICPULSE_REPO_ROOT``; the source checkout (editable install); the current
+    directory. A regular (non-editable) install puts this file in site-packages, where
+    ``parents[3]`` is not the project, which is why Docker images set the env variable.
+    """
+    env = os.environ.get("CIVICPULSE_REPO_ROOT")
+    if env:
+        return Path(env).resolve()
+    checkout = Path(__file__).resolve().parents[3]
+    if (checkout / "configs").is_dir():
+        return checkout
+    return Path.cwd().resolve()
+
+
+REPO_ROOT = _repo_root()
 DEFAULT_INGESTION_CONFIG = REPO_ROOT / "configs" / "ingestion.yaml"
 
 

@@ -6,7 +6,7 @@
 # API serves stored model outputs and never trains or executes models.
 FROM python:3.12-slim AS builder
 
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 CIVICPULSE_REPO_ROOT=/app
 # LightGBM needs the OpenMP runtime.
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
@@ -21,7 +21,7 @@ RUN pip install ".[ml]" \
 
 FROM python:3.12-slim AS runtime
 
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 CIVICPULSE_REPO_ROOT=/app
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY packages ./packages

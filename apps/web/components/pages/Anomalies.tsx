@@ -34,7 +34,7 @@ export function Anomalies() {
           subtitle="Newest first. These are statistical alerts on real data; no confirmed labels exist for real events.">
           <Section state={list}>
             {(l) => l.rows.length === 0 ? <EmptyState message="No anomalies detected for this series." /> : (
-              <div className="max-h-[360px] overflow-auto">
+              <div className="max-h-[360px] overflow-auto" tabIndex={0} role="region" aria-label="Scrollable table">
                 <DataTable caption="Detected anomalies" head={["Date", "Direction", "Actual", "Expected", "Difference", "Robust z"]}
                   rows={l.rows.map((r) => [fmtDate(r.date), r.direction === "spike" ? "▲ Spike" : "▼ Drop", fmtInt(r.actual),
                     r.expected.toFixed(1), `${r.residual > 0 ? "+" : ""}${r.residual.toFixed(0)}`, r.score.toFixed(1)])} />
@@ -62,9 +62,9 @@ export function Anomalies() {
                   <DataTable caption="Detector comparison" head={["Detector", "z threshold", "Recall", "Injected", "Alert rate (uninjected)"]}
                     rows={e.summary.map((r) => [r.detector === "seasonal_mad" ? "Seasonal median + MAD" : "28-day median + MAD (no weekday)",
                       r.threshold, fmtPct(r.recall), fmtInt(r.n_injected), fmtPct(r.alert_rate_uninjected_days, 2)])} />
-                  <DataTable caption="Recall by injected magnitude" head={["Direction", "Magnitude (× expected)", "Recall", "Cases"]}
-                    rows={e.by_magnitude.filter((r) => r.detector === "seasonal_mad" && r.threshold === Number(e.detector.z_threshold))
-                      .map((r) => [r.direction, r.direction === "drop" ? `−${Math.min(r.magnitude, 0.9)}` : `+${r.magnitude}`, fmtPct(r.recall), r.n])} />
+                  <DataTable caption="Recall by injected magnitude" head={["Direction", "Change (× expected)", "Recall", "Cases"]}
+                    rows={byEffectiveMagnitude(e.by_magnitude.filter((r) => r.detector === "seasonal_mad" && r.threshold === Number(e.detector.z_threshold)))
+                      .map((r) => [r.direction, r.direction === "drop" ? `−${r.change}` : `+${r.change}`, fmtPct(r.recall), r.n])} />
                 </div>
               );
             }}
@@ -79,4 +79,19 @@ export function Anomalies() {
       </div>
     </>
   );
+}
+
+/** Drops are capped at −0.9 × expected, so several configured magnitudes can be the same change:
+ *  merge them (recall weighted by case count) instead of listing duplicate rows. */
+function byEffectiveMagnitude(rows: { direction: string; magnitude: number; recall: number; n: number }[]) {
+  const out = new Map<string, { direction: string; change: number; hits: number; n: number }>();
+  for (const r of rows) {
+    const change = r.direction === "drop" ? Math.min(r.magnitude, 0.9) : r.magnitude;
+    const key = `${r.direction}|${change}`;
+    const cur = out.get(key) ?? { direction: r.direction, change, hits: 0, n: 0 };
+    cur.hits += r.recall * r.n;
+    cur.n += r.n;
+    out.set(key, cur);
+  }
+  return [...out.values()].map((r) => ({ ...r, recall: r.n ? r.hits / r.n : 0 }));
 }

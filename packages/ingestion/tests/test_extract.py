@@ -208,3 +208,42 @@ def test_build_where_quotes_category_values(cfg):
     cfg.categories[0].complaint_types = ["Bad'Type"]
     w = build_where(cfg, start=dt.date(2026, 1, 1), end=None)
     assert "'Bad''Type'" in w
+
+
+# ---------------------------------------------------------------- chunked backfills + manifest (M2)
+def test_chunked_backfill_skips_succeeded_window_without_refetching(cfg, paths, no_sleep):
+    fake = FakeSocrata([make_record(i) for i in range(15)])
+    client = client_for(fake, cfg, no_sleep)
+    first = run_extraction(cfg, paths, client, mode="backfill", start=dt.date(2026, 1, 1), end=dt.date(2026, 2, 1))
+    n_requests = len(fake.requests)
+    again = run_extraction(
+        cfg, paths, client, mode="backfill", start=dt.date(2026, 1, 1), end=dt.date(2026, 2, 1), skip_if_succeeded=True
+    )
+    assert again.run_id == first.run_id and len(fake.requests) == n_requests  # nothing fetched
+    other = run_extraction(
+        cfg, paths, client, mode="backfill", start=dt.date(2026, 2, 1), end=dt.date(2026, 3, 1), skip_if_succeeded=True
+    )
+    assert other.run_id != first.run_id  # a different window is a different run
+    assert len(list_runs(paths)) == 2
+
+
+def test_manifest_checksums_counts_and_coverage(cfg, paths, no_sleep):
+    from civicpulse_ingestion.manifest import build_manifest
+
+    fake = FakeSocrata([make_record(i) for i in range(15)])
+    client = client_for(fake, cfg, no_sleep)
+    run_extraction(cfg, paths, client, mode="backfill", start=dt.date(2026, 1, 1), end=dt.date(2026, 2, 1))
+    run_extraction(cfg, paths, client, mode="backfill", start=dt.date(2026, 2, 15), end=dt.date(2026, 3, 1))
+    m = build_manifest(paths, client)
+    assert all(r["rows_fetched_match_disk"] and r["source_count_matches"] for r in m["runs"])
+    assert all(len(r["checksum_sha256"]) == 64 for r in m["runs"])
+    cov = m["backfill_coverage"]
+    assert cov["start"] == "2026-01-01" and cov["end_exclusive"] == "2026-03-01"
+    assert cov["gaps_between_windows"] == [{"from": "2026-02-01", "to": "2026-02-15"}]  # reported, not filled
+    assert m["totals"]["raw_rows"] == 30
+    # Any change to a raw page changes the run checksum.
+    page = next(paths.raw.rglob("page-00001.parquet"))
+    before = [r["checksum_sha256"] for r in build_manifest(paths)["runs"]]
+    pl.read_parquet(page).head(3).write_parquet(page)
+    after = [r["checksum_sha256"] for r in build_manifest(paths)["runs"]]
+    assert sum(a != b for a, b in zip(before, after, strict=True)) == 1

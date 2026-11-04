@@ -10,7 +10,7 @@ export default function Page() {
       <PageHeader title="About CivicPulse AI"
         subtitle="A personal engineering portfolio project: predictive city operations intelligence on public NYC 311 data." />
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="What it does today (Milestones 1–2)">
+        <Card title="What it does today (Milestones 1â€“2)">
           <ul className="list-disc space-y-1.5 pl-5 text-sm text-ink-2">
             <li>Extracts NYC 311 residential-noise and heat/hot-water requests from the Socrata API using keyset pagination, retries, checkpoints and incremental watermarks.</li>
             <li>Builds cleaned, typed Parquet tables with DuckDB, with data-quality rules and a full audit of each run.</li>

@@ -1,5 +1,5 @@
-# Local stack: API + web. STATUS: written but NOT yet verified (Docker daemon was unavailable).
-#   docker compose up --build            -> serves the bundled real-data sample (969 records)
+# Local stack: API + web. VERIFIED 2026-11-04 (Docker 27.5.1): both images build, API healthy, all pages 200 via the web proxy.
+#   docker compose up --build            -> serves the bundled real-data sample (3,785 records, smoke-scale models)
 #   CIVICPULSE_DATA_DIR=/app/data docker compose up --build
 #                                         -> serves your local full snapshot from ./data (read-only)
 services:

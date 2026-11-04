@@ -79,7 +79,7 @@ export function Explorer() {
           {data.status === "success" && data.data.rows.length === 0 && <EmptyState />}
           {data.status === "success" && data.data.rows.length > 0 && (
             <>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scrollable table">
                 <table className="w-full min-w-[860px] text-left text-sm">
                   <caption className="sr-only">Service requests, sortable by column</caption>
                   <thead className="text-xs text-ink-3">

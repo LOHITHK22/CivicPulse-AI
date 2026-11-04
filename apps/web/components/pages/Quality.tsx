@@ -49,7 +49,7 @@ export function Quality() {
       </Card>
 
       <Card id="rules" title="Validation rules" subtitle={`Build ${String(b.build_id ?? "—")} · thresholds in docs/data/QUALITY_RULES.md`}>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scrollable table">
           <table className="w-full min-w-[760px] text-left text-sm">
             <caption className="sr-only">Data quality rule results for the latest build</caption>
             <thead className="text-xs text-ink-3">

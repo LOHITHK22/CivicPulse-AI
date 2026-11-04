@@ -84,6 +84,8 @@ class FakeSocrata:
             ids = [r[":id"] for r in rows]
             pos = ids.index(m.group(1)) + 1 if m.group(1) in ids else len(rows)
             rows = rows[pos:]
+        if request.url.params.get("$select", "").startswith("count(*)"):
+            return httpx.Response(200, json=[{"n": str(len(rows))}])
         return httpx.Response(200, json=rows[:limit])
 
     @property

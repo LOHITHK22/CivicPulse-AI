@@ -44,7 +44,7 @@ export function ModelEvaluation() {
                 Test origins {fmtDate(e.periods.test.first_origin)} → {fmtDate(e.periods.test.last_origin)} ({e.periods.test.origins}) ·
                 Training: {e.periods.training}. Selected: <strong className="text-ink">{modelLabel(e.selection.selected)}</strong> ({e.selection.rule}).
               </p>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scrollable table">
                 <DataTable caption="Forecast accuracy by model" head={["Model", "Period", "MAE", "WAPE", "Bias", `${fmtPct(e.interval.level, 0)} coverage`, "Mean width", "Forecasts"]}
                   rows={["validation", "test"].flatMap((p) => FC_MODELS.map((m) => {
                     const r = e.overall.find((x) => x.model === m && x.period === p);
@@ -52,7 +52,7 @@ export function ModelEvaluation() {
                       f2(r?.bias), fmtPct(r?.interval_coverage), r?.interval_mean_width?.toFixed(1) ?? "—", fmtInt(r?.n)];
                   }))} />
               </div>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scrollable table">
                 <DataTable caption="LightGBM vs baselines" head={["Comparison (test)", "Baseline WAPE", "LightGBM WAPE", "Relative change", "95% CI of WAPE difference", "Clear?"]}
                   rows={e.comparisons.map((c) => [`LightGBM vs ${modelLabel(c.baseline)}`, fmtPct(c.baseline_value), fmtPct(c.candidate_value),
                     `${c.relative_improvement >= 0 ? "−" : "+"}${fmtPct(Math.abs(c.relative_improvement))} error`,
@@ -76,7 +76,7 @@ export function ModelEvaluation() {
                     rows={e.feature_importance.permutation_test_wape_increase.slice(0, 12).map((p) => ({ feature: p.feature, value: p.wape_increase_mean, err: p.wape_increase_std }))} />
                 </div>
               </div>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scrollable table">
                 <DataTable caption="Test WAPE by category" head={["Category", ...FC_MODELS.map(modelLabel)]}
                   rows={[...new Set(e.by_category.map((x) => x.category_key as string))].map((c) => [c, ...FC_MODELS.map((m) =>
                     fmtPct(e.by_category.find((x) => x.period === "test" && x.model === m && x.category_key === c)?.wape))])} />
@@ -97,7 +97,7 @@ export function ModelEvaluation() {
                 test {fmtDate(e.splits.test?.created_from)} → {fmtDate(e.splits.test?.created_to)} ({fmtInt(e.splits.test?.n)}).
                 Selected: <strong className="text-ink">{modelLabel(e.selection.selected)}</strong> ({e.selection.rule}).
               </p>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scrollable table">
                 <DataTable caption="Delay-risk metrics" head={["Model", "Split", "PR-AUC", "ROC-AUC", "Brier", "ECE", "Precision", "Recall", "Threshold"]}
                   rows={(["validation", "test"] as const).flatMap((s) => DR_MODELS.map((m) => {
                     const r = e.models[m][s];
@@ -113,7 +113,7 @@ export function ModelEvaluation() {
                 </div>
                 <div>
                   <h3 className="mb-2 text-xs font-medium text-ink-2">Largest logistic-regression coefficients (standardized log-odds)</h3>
-                  <div className="max-h-[300px] overflow-auto">
+                  <div className="max-h-[300px] overflow-auto" tabIndex={0} role="region" aria-label="Scrollable table">
                     <DataTable caption="Logistic regression coefficients" head={["Feature", "Level", "Coefficient"]}
                       rows={e.explanations.logistic_regression_coefficients.slice(0, 20).map((c) => [c.feature, c.level ?? "(numeric, per SD)", c.coefficient.toFixed(3)])} />
                   </div>
@@ -127,7 +127,7 @@ export function ModelEvaluation() {
       <Card id="an" title="Anomaly detection: injected-anomaly evaluation" actions={<SyntheticBadge />}>
         <Section state={an}>
           {(e) => (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scrollable table">
               <DataTable caption="Recall by series size" head={["Detector", "z", "Series size", "Recall", "Injected"]}
                 rows={e.by_series_size.filter((r) => r.threshold === Number(e.detector.z_threshold)).map((r) =>
                   [r.detector, r.threshold, r.series_size, fmtPct(r.recall), r.n])} />
