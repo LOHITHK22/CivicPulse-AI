@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+/*
+ * CivicPulse theme — dark navy, intentionally dark-only (a deliberate design decision for an
+ * operations console). Chart series colors are the validated dark categorical steps, checked
+ * against --surface-1 (#111c33) with the dataviz palette validator: all checks pass
+ * (worst adjacent CVD ΔE 8.4, normal-vision ΔE 19.3, all ≥ 3:1 contrast).
+ */
+:root {
+  color-scheme: dark;
+  --bg: #0a1224;
+  --surface-1: #111c33;
+  --surface-2: #17243f;
+  --surface-3: #1f2f50;
+  --border: #263757;
+  --border-strong: #35496f;
+  --text-primary: #eef2f8;
+  --text-secondary: #b4c0d4;
+  --text-muted: #8494ad;
+  --accent-teal: #2dd4bf;
+  --accent-cyan: #22d3ee;
+  --accent-violet: #a78bfa;
+  --grid: #22324f;
+
+  --series-1: #3987e5; /* blue */
+  --series-2: #d95926; /* orange */
+  --series-3: #199e70; /* aqua */
+  --series-4: #c98500; /* yellow */
+  --series-5: #d55181; /* magenta */
+
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-ink: var(--text-primary);
+  --color-ink-2: var(--text-secondary);
+  --color-ink-3: var(--text-muted);
+  --color-teal: var(--accent-teal);
+  --color-cyan: var(--accent-cyan);
+  --color-violet: var(--accent-violet);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 0px, var(--surface-3) 120px, var(--surface-2) 240px);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 6px;
+}

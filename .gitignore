@@ -1,0 +1,53 @@
+# Environments & secrets
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Data — never commit raw/processed data, local warehouses or state.
+data/raw/
+data/processed/
+data/features/
+data/state/
+data/warehouse/
+*.duckdb
+*.duckdb.wal
+# The small, reviewed real-data sample IS committed:
+!data/samples/
+
+# Models (Milestone 2+)
+models/artifacts/
+mlruns/
+
+# Node / Next.js
+node_modules/
+apps/web/.next/
+apps/web/out/
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+*.tsbuildinfo
+next-env.d.ts
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+# Local sample warehouses
+.sample-data/

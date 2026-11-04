@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "civicpulse"
+version = "0.1.0"
+description = "CivicPulse AI — predictive city operations intelligence on NYC 311 data (Milestone 1: ingestion, warehouse, analytics API)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.8",
+  "pydantic-settings>=2.4",
+  "duckdb>=1.1",
+  "polars>=1.0",
+  "pyarrow>=17",
+  "httpx>=0.27",
+  "pyyaml>=6",
+  "tzdata>=2024.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "pytest-cov",
+  "respx>=0.21",
+  "ruff>=0.6",
+  "mypy>=1.11",
+  "types-PyYAML",
+  "pip-audit",
+]
+
+[project.scripts]
+civicpulse = "civicpulse_ingestion.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["packages/shared", "packages/ingestion", "packages/analytics", "services/api"]
+include = ["civicpulse_*"]
+
+[tool.pytest.ini_options]
+testpaths = ["packages", "services/api/tests", "tests"]
+addopts = "-ra --strict-markers -m 'not live'"
+markers = [
+  "live: hits the real NYC Open Data API (opt-in: pytest -m live)",
+  "integration: multi-component test using the committed real-data sample",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["apps", "data", "models"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "N", "SIM", "RUF"]
+ignore = [
+  "S608",   # SQL is composed only from allow-listed identifiers; values are always bound parameters
+  "S101",   # asserts are fine in tests
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["civicpulse_shared", "civicpulse_ingestion", "civicpulse_analytics", "civicpulse_api", "conftest"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S", "B"]
+"tests/**" = ["S", "B"]
+"conftest.py" = ["S"]
+"packages/analytics/civicpulse_analytics/service.py" = ["RUF001"]  # en-dashes in display labels are intentional
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+exclude = ["tests/", "build/"]
+files = ["packages/shared/civicpulse_shared", "packages/ingestion/civicpulse_ingestion", "packages/analytics/civicpulse_analytics", "services/api/civicpulse_api"]
+mypy_path = ["packages/shared", "packages/ingestion", "packages/analytics", "services/api"]
+explicit_package_bases = true

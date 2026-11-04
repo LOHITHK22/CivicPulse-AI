@@ -1,0 +1,27 @@
+# Local stack: API + web. STATUS: written but NOT yet verified (Docker daemon was unavailable).
+#   docker compose up --build            -> serves the bundled real-data sample (969 records)
+#   CIVICPULSE_DATA_DIR=/app/data docker compose up --build
+#                                         -> serves your local full snapshot from ./data (read-only)
+services:
+  api:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    environment:
+      CIVICPULSE_DATA_DIR: ${CIVICPULSE_DATA_DIR:-/app/sample-data}
+      CIVICPULSE_API_CORS_ORIGINS: http://localhost:3000
+    volumes:
+      - ./data:/app/data:ro
+    # Not published to the host: the browser reaches the API only through the web service.
+    expose:
+      - "8000"
+  web:
+    build:
+      context: apps/web
+      args:
+        API_BASE_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy

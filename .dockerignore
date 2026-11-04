@@ -1,0 +1,11 @@
+.venv
+.git
+data/raw
+data/processed
+data/state
+data/warehouse
+.sample-data
+apps
+**/__pycache__
+**/.pytest_cache
+.env

@@ -1,0 +1,60 @@
+# NYC 311 ingestion configuration.
+# Verified against the live API on 2026-11-03 (see docs/research/SOURCES.md).
+
+source:
+  dataset_id: erm2-nwe9
+  base_url: https://data.cityofnewyork.us
+  # Columns explicitly selected from the source. Free-text address fields
+  # (incident_address, street_name, cross streets, landmark, bbl) and
+  # resolution_description are deliberately NOT ingested (privacy, untrusted text,
+  # and post-creation leakage for Milestone 2 models).
+  fields:
+    - unique_key
+    - created_date
+    - closed_date
+    - agency
+    - agency_name
+    - complaint_type
+    - descriptor
+    - location_type
+    - incident_zip
+    - status
+    - due_date
+    - resolution_action_updated_date
+    - community_board
+    - council_district
+    - police_precinct
+    - borough
+    - latitude
+    - longitude
+    - open_data_channel_type
+  # Socrata system fields used for keyset paging and incremental watermarks.
+  system_fields:
+    - ":id"
+    - ":updated_at"
+
+# Complaint categories in scope. Add more here; complaint_type must match the source exactly.
+categories:
+  - key: noise_residential
+    label: Residential noise
+    complaint_types: ["Noise - Residential"]
+  - key: heat_hot_water
+    label: Heat / hot water
+    complaint_types: ["HEAT/HOT WATER"]
+
+# Bounded historical window (created_date, NYC local floating time, [start, end)).
+backfill:
+  start: "2025-11-01"
+  end: "2026-11-01"
+
+http:
+  page_size: 50000          # Socrata 2.0 endpoints cap $limit at 50,000
+  timeout_seconds: 120
+  max_retries: 6
+  backoff_base_seconds: 2.0
+  backoff_max_seconds: 60.0
+  max_pages_per_run: 200    # hard safety cap: 200 * 50k = 10M rows
+
+incremental:
+  # :updated_at is re-checked this far behind the stored watermark to catch late/bulk updates.
+  lookback_hours: 72
