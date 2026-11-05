@@ -317,8 +317,18 @@ class PredictionService:
 
     # -- anomalies ------------------------------------------------------------------
     def anomalies(
-        self, category: str | None, borough: str | None, direction: str | None, start: Any, end: Any, limit: int
+        self,
+        category: str | None,
+        borough: str | None,
+        direction: str | None,
+        start: Any,
+        end: Any,
+        limit: int,
+        order_by: str = "date",
     ) -> dict[str, Any]:
+        """Flagged days. ``order_by``: "date" (newest first, the API default) or "score" (largest |score|)."""
+        if order_by not in ("date", "score"):
+            raise ValueError("order_by must be 'date' or 'score'")
         t0 = time.perf_counter()
         where = ["is_anomaly"]
         params: list[Any] = []
@@ -333,10 +343,11 @@ class PredictionService:
             where.append("date <= ?")
             params.append(end)
         clause = " AND ".join(where)
+        order = "date DESC, abs(score) DESC" if order_by == "date" else "abs(score) DESC, date DESC"
         total = self._rows(f"SELECT count(*) AS n FROM anomalies WHERE {clause}", params)[0]["n"]
         rows = self._rows(
             f"""SELECT date, category_key, borough, actual, expected, residual, score, direction
-                FROM anomalies WHERE {clause} ORDER BY date DESC, abs(score) DESC LIMIT ?""",
+                FROM anomalies WHERE {clause} ORDER BY {order} LIMIT ?""",
             [*params, limit],
         )
         return {
@@ -345,6 +356,18 @@ class PredictionService:
             "label_status": "unverified: detected by the model, not confirmed events",
             "meta": self._meta(t0, len(rows)),
         }
+
+    def anomaly_window(self) -> dict[str, Any]:
+        """First and last scored day of the anomaly detector."""
+        return self._rows("SELECT min(date) AS first, max(date) AS last, count(*) AS series_days FROM anomalies")[0]
+
+    def backtest_periods(self) -> list[dict[str, Any]]:
+        """Actual first/last forecast target dates and origins scored per backtest period."""
+        return self._rows(
+            """SELECT period, min(target_date) AS first_target, max(target_date) AS last_target,
+                      min(origin) AS first_origin, max(origin) AS last_origin, count(DISTINCT origin) AS origins
+               FROM backtest GROUP BY 1 ORDER BY 1"""
+        )
 
     def anomaly_series(self, category: str, borough: str, start: Any, end: Any) -> dict[str, Any]:
         t0 = time.perf_counter()

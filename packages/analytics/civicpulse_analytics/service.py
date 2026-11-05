@@ -369,16 +369,23 @@ class AnalyticsService:
         return self._cached(f"series:{grain}:{split_by}:{f.cache_key()}", compute)
 
     def breakdown(self, f: Filters, dimension: str) -> Breakdown:
-        dims = {"category_key": "category_label", "borough": "borough", "agency": "agency_name"}
+        # dimension -> (group key expression, label expression)
+        dims = {
+            "category_key": ("category_key", "category_label"),
+            "borough": ("borough", "borough"),
+            "agency": ("agency", "agency_name"),
+            "descriptor": ("coalesce(descriptor, 'UNSPECIFIED')", "coalesce(descriptor, 'UNSPECIFIED')"),
+        }
         if dimension not in dims:
             raise ValueError(f"dimension must be one of {list(dims)}")
+        key_expr, label_expr = dims[dimension]
 
         def compute() -> Breakdown:
             t0 = time.perf_counter()
             where, params = f.where()
             rows = self._query(
                 f"""
-                SELECT {dimension} AS key, any_value({dims[dimension]}) AS label, count(*) AS n,
+                SELECT {key_expr} AS key, any_value({label_expr}) AS label, count(*) AS n,
                        count(*) FILTER (WHERE status_group = 'open') AS n_open,
                        count(*) FILTER (WHERE status_group = 'closed') AS n_closed,
                        median(hours_to_close) AS med,
