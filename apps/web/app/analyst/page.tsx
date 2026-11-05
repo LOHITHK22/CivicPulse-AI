@@ -1,18 +1,16 @@
 import type { Metadata } from "next";
 
-import { PlannedPage } from "@/components/PlannedPage";
+import { Analyst } from "@/components/pages/Analyst";
+import { PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = { title: "AI Analyst" };
 
 export default function Page() {
   return (
-    <PlannedPage title="AI Analyst" milestone={3}
-      purpose="A single analyst agent that answers operational questions through a real MCP server."
-      scope={[
-        "Official MCP Python SDK server exposing typed, read-only analytical tools",
-        "Answers grounded only in tool results, with evidence, provenance and uncertainty",
-        "Visible tool-call trace and a 40+ scenario evaluation suite",
-        "Server-side credentials, tool allowlists, rate and spending limits",
-      ]} />
+    <>
+      <PageHeader title="AI Analyst"
+        subtitle="Ask questions about the NYC 311 snapshot. Every answer is built from read-only MCP tool calls, cites its evidence and is checked automatically before it is shown." />
+      <Analyst />
+    </>
   );
 }

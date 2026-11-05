@@ -1,7 +1,46 @@
 # Project status
 
-Last updated: 2026-11-04. Current milestone: **2, implemented and awaiting review.** Milestone 1 was
-approved. Milestone 3 has **not** been started.
+Last updated: 2026-11-04. Current milestone: **3, implemented and awaiting review** (branch
+`feature/milestone-3-mcp-analyst`, not merged). Milestones 1 and 2 were approved (M2 with model-safety
+restrictions). Milestone 4 has **not** been started.
+
+## Milestone 3: Real MCP server + evidence-grounded AI analyst
+
+| Capability | Status | Evidence |
+|---|---|---|
+| AI readiness audit before exposing models to an agent | Done. 42/42 artifact checks reproduce; **closure-delay numeric predictions disabled** for the agent (historical status not reliably reconstructable) | `docs/evaluation/AI_READINESS_AUDIT.md` |
+| MCP server, official SDK `mcp` 2.3, 10 typed read-only tools, 3 resources, audit log | Done | `docs/mcp/TOOLS.md`, `services/mcp/` |
+| MCP client + protocol verification (stdio, both protocol versions; token-protected HTTP) | Done | `docs/mcp/PROTOCOL_VERIFICATION.md` |
+| Orchestrator: provider abstraction (fake / OpenAI-compatible), allow-list + schema validation, tool/token/time/cost budgets, evidence IDs, deterministic grounding, bounded regeneration, verified fallback | Done | `docs/mcp/ARCHITECTURE.md`, `packages/agent/` |
+| API: `POST /api/v1/ai/investigations` (only non-GET route), `GET /api/v1/ai/status`; Origin, size, strict JSON, rate limits, optional token | Done | `services/api/tests/test_api_ai.py` |
+| AI Analyst page: suggestions, answers with clickable evidence, charts, freshness, trace panel, model warnings, copy / retry / new / clear, loading and error states, keyboard and mobile | Done | `apps/web/tests/analyst.spec.ts`, `docs/screenshots/analyst.png` |
+| Evaluation: 60 deterministic scenarios on the full snapshot via real stdio MCP | **60/60 with the FAKE provider** (first run 56/60; fixes disclosed). **No real-LLM evaluation run.** | `docs/evaluation/AGENT_EVAL.md` |
+| Threat model | Done | `docs/security/AI_THREAT_MODEL.md` |
+| Regression | pytest 244 passed (3 live tests deselected); Playwright 37/37 on the full snapshot; ruff, mypy, tsc, eslint, `next build` clean | this file, §Verification |
+| Docker / compose | **Verified locally** (Docker 27.5.1): images build; in-container API spawns the MCP server over stdio and answers through the web proxy | §Verification |
+| Secret scan | detect-secrets 1.5.0: 0 findings in the 38 changed files | |
+
+### Verification (2026-11-04)
+- `pytest`: 244 passed, 3 deselected (`live`). Agent: 51 unit + 20 orchestrator; API AI: 10; MCP: 37.
+- Playwright (4 workers, real API + Next production build, fake provider): 37 passed, including axe
+  checks on `/analyst` (empty and with an answered, expanded investigation) and mobile overflow.
+- `scripts/agent_eval.py`: 60/60, median 2.15 s per investigation.
+- Docker compose (bundled sample): `/api/v1/ai/status` 200; an investigation returned `answered`,
+  MCP `civicpulse-mcp` 0.3.0, protocol 2025-11-25, stdio; `/analyst` 200.
+
+### Known limitations (Milestone 3)
+- **No live LLM has been tested.** The default provider is a deterministic rule-based fake. The
+  OpenAI-compatible provider is tested only against a mocked HTTP transport. Paid testing needs
+  explicit authorization and a key.
+- Grounding verifies that numbers exist in cited evidence, not that prose attributes them correctly.
+- Input screening is regex-based and bypassable by paraphrase; containment relies on the read-only
+  tool surface, budgets and output validation.
+- Rate limits and the cost ceiling are in-process (single instance). The cost ceiling needs
+  per-token prices configured to limit spend.
+- The analyst endpoint is anonymous unless `CIVICPULSE_AI_ACCESS_TOKEN` is set; it must be set (and
+  injected server-side) before any public deployment.
+- Each investigation spawns an MCP process (~1.5–2 s overhead).
+- Answers describe a historical snapshot (cutoff 2026-11-01 02:04:40 NYC), never live operations.
 
 ## Milestone 2: Predictive modeling (branch `feature/milestone-2-predictive`)
 
@@ -63,10 +102,6 @@ approved. Milestone 3 has **not** been started.
 - Licensing terms page could not be retrieved during research. Attribution is applied
   conservatively, and the terms need re-verifying before public launch.
 
-## Milestones 3–5: not started
-- **M3:** MCP server (`mcp` 2.x), MCP client, analyst agent, 40+ scenario eval suite.
+## Milestones 4–5: not started
 - **M4:** MapLibre geographic explorer, investigation reports, performance polish.
 - **M5:** hosting research, deployment, case study, evidence-based resume bullets.
-
-Docs owned by later milestones (`docs/mcp/TOOLS.md`, `docs/evaluation/AGENT_EVAL.md`) are
-intentionally **not created yet**.

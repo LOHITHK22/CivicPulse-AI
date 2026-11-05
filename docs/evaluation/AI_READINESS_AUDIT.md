@@ -55,11 +55,11 @@ Residential noise is improved: 0.244 vs naive 0.300 and seasonal 0.268.
   publishes no history, so this is **NOT VERIFIED**. It mainly affects how a backtest should be
   read. It does not affect the descriptive counts.
 
-### Documentation imprecisions found
+### Documentation imprecisions found (corrected in `MODEL_EVALUATION.md` in Milestone 3)
 These are not code defects.
 - `MODEL_EVALUATION.md` gives the validation targets as "2025-05-01 → 2025-10-31". The last
   validation origin is 2025-10-22, so the latest scored target is **2025-10-29**.
-- The test targets end **2025-10-30**, not 10-31.
+- The test targets end **2026-10-30**, not 10-31.
 - The periods in the config are bounds, and no metric is affected. The MCP tools report the
   **actual** first and last target dates.
 

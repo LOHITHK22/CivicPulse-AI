@@ -27,6 +27,8 @@ export default defineConfig({
       url: `http://127.0.0.1:${API_PORT}/health`,
       reuseExistingServer: !process.env.CI,
       cwd: "../..",
+      // The analyst's per-client limit (6/min by default) would throttle parallel e2e workers on 127.0.0.1.
+      env: { CIVICPULSE_AI_RATE_LIMIT_PER_MINUTE: "120", CIVICPULSE_LLM_PROVIDER: "fake" },
       timeout: 60_000,
     },
     {

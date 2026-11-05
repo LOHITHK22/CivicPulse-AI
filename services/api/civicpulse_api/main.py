@@ -31,12 +31,13 @@ from civicpulse_analytics.models import (
     Series,
 )
 from civicpulse_analytics.predictions import PredictionService
+from civicpulse_api.ai import INVESTIGATIONS_PATH, build_router, get_agent_settings, origin_allowed
 from civicpulse_api.ratelimit import TokenBucketLimiter
 from civicpulse_shared.config import get_settings
 from civicpulse_shared.logging import configure_logging, log
 
 logger = logging.getLogger("civicpulse_api")
-API_VERSION = "0.2.0"
+API_VERSION = "0.3.0"
 MAX_URL_LENGTH = 4096
 
 
@@ -110,8 +111,8 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_methods=["GET"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type", "Authorization"],
         allow_credentials=False,
     )
 
@@ -120,7 +121,18 @@ def create_app() -> FastAPI:
         request_id = uuid.uuid4().hex[:12]
         started = time.perf_counter()
         if request.method not in ("GET", "HEAD", "OPTIONS"):
-            return JSONResponse({"detail": "read-only API"}, status_code=405)
+            # The only write-shaped route is the AI investigation POST (it reads data, never writes it).
+            if request.method != "POST" or request.url.path != INVESTIGATIONS_PATH:
+                return JSONResponse({"detail": "read-only API"}, status_code=405)
+            if not origin_allowed(request.headers.get("origin")):
+                return JSONResponse({"detail": "origin not allowed"}, status_code=403)
+            if not request.headers.get("content-type", "").lower().startswith("application/json"):
+                return JSONResponse({"detail": "content type must be application/json"}, status_code=415)
+            length = request.headers.get("content-length")
+            if length is None or not length.isdigit():
+                return JSONResponse({"detail": "content-length required"}, status_code=411)
+            if int(length) > get_agent_settings().ai_max_body_bytes:
+                return JSONResponse({"detail": "request body too large"}, status_code=413)
         if len(str(request.url)) > MAX_URL_LENGTH:
             return JSONResponse({"detail": "request URL too long"}, status_code=414)
         client = client_key(request, settings.api_trusted_proxy_hops)
@@ -339,6 +351,7 @@ def create_app() -> FastAPI:
             raise HTTPException(422, "end must be on or after start")
         return pred.anomaly_series(category, borough, start, end)
 
+    app.include_router(build_router(lambda request: client_key(request, settings.api_trusted_proxy_hops)))
     return app
 
 

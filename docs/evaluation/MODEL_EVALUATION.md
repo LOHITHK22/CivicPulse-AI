@@ -40,10 +40,12 @@ The suite also contains a reproducibility test on a synthetic warehouse
 **Training:** an expanding window. For each origin, use every (series, origin', horizon) row
 whose target date ≤ origin, from 2024-01-30 onwards.
 
-| Period | Targets | Origins | Points per model |
-|---|---|---|---|
-| Validation | 2025-05-01 → 2025-10-31 | 26 weekly | 1,820 |
-| Test | 2025-11-01 → 2026-10-31 | 52 weekly | 3,640 |
+| Period | Configured bounds | Actual scored targets | Origins | Points per model |
+|---|---|---|---|---|
+| Validation | 2025-05-01 → 2025-10-31 | → 2025-10-29 (last origin 2025-10-22) | 26 weekly | 1,820 |
+| Test | 2025-11-01 → 2026-10-31 | 2025-11-01 → 2026-10-30 | 52 weekly | 3,640 |
+
+Actual target dates corrected on 2026-11-04 by the AI readiness audit; no metric changes.
 
 | Model | Val WAPE | Test WAPE | Test MAE | Test 90% PI coverage |
 |---|---|---|---|---|

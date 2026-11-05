@@ -10,6 +10,11 @@ services:
     environment:
       CIVICPULSE_DATA_DIR: ${CIVICPULSE_DATA_DIR:-/app/sample-data}
       CIVICPULSE_API_CORS_ORIGINS: http://localhost:3000
+      # AI analyst: the MCP server runs as a stdio subprocess of the API (never network-exposed).
+      # Default is the deterministic fake provider; a real provider needs a server-side key in the environment.
+      CIVICPULSE_LLM_PROVIDER: ${CIVICPULSE_LLM_PROVIDER:-fake}
+      CIVICPULSE_LLM_MODEL: ${CIVICPULSE_LLM_MODEL:-deterministic-fake-v1}
+      CIVICPULSE_OPENAI_API_KEY: ${CIVICPULSE_OPENAI_API_KEY:-}
     volumes:
       - ./data:/app/data:ro
     # Not published to the host: the browser reaches the API only through the web service.

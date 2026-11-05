@@ -61,3 +61,27 @@ export function useApi<T>(path: string | null, reloadKey = 0): ApiState<T> {
   if (settled && settled.key === key) return settled.state;
   return { status: "loading", data: undefined, error: undefined };
 }
+
+/** POST JSON (used only by the AI analyst). Errors carry the API's safe message, never a stack. */
+export async function postJson<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method: "POST",
+      signal,
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    if ((e as Error).name === "AbortError") throw e;
+    throw new ApiError("Could not reach the CivicPulse API. Is it running?", 0);
+  }
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const code = (data as { code?: string } | null)?.code;
+    if (res.status === 429) throw new ApiError("You're asking questions faster than the analyst allows. Please wait a minute and retry.", 429);
+    if (res.status === 503 && code) throw new ApiError("The AI analyst's daily limit has been reached. Please try again later.", 503);
+    throw new ApiError(describe(res.status, data), res.status);
+  }
+  return data as T;
+}

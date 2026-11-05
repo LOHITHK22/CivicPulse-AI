@@ -13,6 +13,7 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY packages ./packages
 COPY services/api ./services/api
+COPY services/mcp ./services/mcp
 COPY configs ./configs
 COPY scripts ./scripts
 COPY data/samples ./data/samples
@@ -26,6 +27,7 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY packages ./packages
 COPY services/api ./services/api
+COPY services/mcp ./services/mcp
 COPY configs ./configs
 RUN pip install . \
  && useradd --system --uid 10001 app

@@ -41,7 +41,7 @@ class Settings(BaseSettings):
 
     data_dir: Path = REPO_ROOT / "data"
     socrata_app_token: str | None = None
-    api_cors_origins: str = "http://localhost:3000"
+    api_cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     api_rate_limit_per_minute: int = Field(default=600, ge=1, le=100_000)
     # Number of trusted reverse proxies that APPEND to X-Forwarded-For in front of the API.
     # 0 (default) = ignore X-Forwarded-For entirely (it is client-controlled and spoofable).

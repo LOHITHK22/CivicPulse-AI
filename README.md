@@ -4,10 +4,10 @@ A personal engineering project. It is an end-to-end analytics platform on **real
 requests** (residential noise, heat/hot water). It is built in milestones, and only what is
 listed as done below has been implemented and verified.
 
-> **Status: Milestone 2 (predictive modeling) implemented and awaiting review.** Milestone 1
-> analytics, plus daily forecasts, closure-delay risk, anomaly detection, a model API and a
-> Prediction Lab UI, all trained and evaluated on real data. The MCP server and AI analyst (M3)
-> and maps/reports (M4) are **not built yet**. Their pages say so. See
+> **Status: Milestone 3 (MCP server + evidence-grounded AI analyst) implemented and awaiting
+> review.** Milestones 1–2 (analytics, forecasts, closure-delay research model, anomalies) were
+> approved. Maps and reports (M4) are **not built yet**; their page says so. The AI analyst has been
+> verified only with a deterministic **fake** provider. No real LLM has been run through it. See
 > [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md).
 
 ![Operations overview](docs/screenshots/overview.png)
@@ -47,6 +47,22 @@ those quirks explicitly.
   - The **Prediction Lab** pages (Forecasts, Delay Risk, Anomalies, Model Evaluation) show real
     model output and backtest metrics. They show no illustrative numbers.
 
+- **MCP server + AI analyst (Milestone 3)**:
+  - `civicpulse-mcp`: a real MCP server (official Python SDK) with 10 typed, read-only tools
+    (trends, borough comparison, breakdowns, forecast, restricted closure-delay research summary,
+    anomaly flags, explanations, data quality, model evaluation, investigation report). Every
+    result carries provenance, coverage, uncertainty and limitations. No SQL, file or shell tools.
+  - An orchestrator that validates every tool call against the server's schemas, enforces tool,
+    token, time and cost budgets, assigns evidence IDs, and **checks every number in an answer
+    against the evidence it cites**. It regenerates once, then falls back to verified tool summaries.
+  - The **AI Analyst** page shows the answer with clickable evidence, charts, a freshness indicator,
+    the full tool trace and model warnings. Closure-delay predictions are disabled for the agent
+    after the [AI readiness audit](docs/evaluation/AI_READINESS_AUDIT.md).
+  - 60 deterministic evaluation scenarios: 60/60 with the fake provider
+    ([`AGENT_EVAL.md`](docs/evaluation/AGENT_EVAL.md)). These results test the controls, not LLM quality.
+
+![AI Analyst](docs/screenshots/analyst.png)
+
 ### Model results (test periods, real data; full detail in [`docs/evaluation/MODEL_EVALUATION.md`](docs/evaluation/MODEL_EVALUATION.md))
 | Task | Selected (on validation) | Test result | Honest reading |
 |---|---|---|---|
@@ -71,10 +87,14 @@ KPI query 72–80 ms cold / ~5 ms cached. Uncached explorer search ~52 ms. 10,00
 ## Architecture
 ```text
 Socrata API → ingestion (raw Parquet + run state) → DuckDB transform → Parquet warehouse
-            → analytics service (shared; MCP tools will reuse it in M3) → FastAPI → Next.js
+            → analytics service (shared by the REST API and the MCP tools) → FastAPI → Next.js
 warehouse → civicpulse-model train → data/models/runs/<id>/ (predictions, backtests, evaluation)
             → prediction service (read-only) → FastAPI /api/v1/predictions, /models, /anomalies
+/analyst → POST /api/v1/ai/investigations → orchestrator (provider, policy, grounding)
+            → MCP client ⇄ civicpulse-mcp (stdio subprocess) → analytics + prediction services
 ```
+MCP details: [`docs/mcp/ARCHITECTURE.md`](docs/mcp/ARCHITECTURE.md) · [tools](docs/mcp/TOOLS.md) ·
+[protocol verification](docs/mcp/PROTOCOL_VERIFICATION.md) · [AI threat model](docs/security/AI_THREAT_MODEL.md).
 Details and the architecture decision record: [`docs/architecture/SYSTEM_DESIGN.md`](docs/architecture/SYSTEM_DESIGN.md).
 
 ## Quick start
@@ -89,6 +109,11 @@ bash scripts/backfill_history.sh                   # optional: history back to 2
 .venv/Scripts/python -m uvicorn civicpulse_api.main:app --port 8000
 cd apps/web && npx next build && npx next start -p 3000          # open http://localhost:3000
 ```
+The AI analyst works out of the box with the deterministic fake provider (`CIVICPULSE_LLM_PROVIDER=fake`,
+no key, no network). To use an OpenAI-compatible model, set `CIVICPULSE_LLM_PROVIDER=openai`,
+`CIVICPULSE_LLM_MODEL` and `CIVICPULSE_OPENAI_API_KEY` in your local `.env` (server-side only; see
+`.env.example`). Run the MCP server on its own with `civicpulse-mcp` (stdio) for any MCP client.
+
 Offline: `python scripts/build_sample_warehouse.py --data-dir .sample-data --with-models` and set
 `CIVICPULSE_DATA_DIR=.sample-data`. This uses 3,785 committed real records (2023-01 → 2026-11)
 and trains smoke-scale models whose metrics are **not** meaningful. See
@@ -100,9 +125,10 @@ targets in the `Makefile`.
 
 ## Tests
 ```bash
-.venv/Scripts/python -m pytest                 # 126 offline tests (ingestion, analytics, modeling, API)
+.venv/Scripts/python -m pytest                 # 244 offline tests (ingestion, analytics, modeling, API, MCP, agent)
 .venv/Scripts/python -m pytest -m live         # opt-in checks against the real API
-cd apps/web && npx playwright test             # 28 browser tests incl. Prediction Lab, axe accessibility, mobile
+cd apps/web && npx playwright test             # 37 browser tests incl. AI Analyst, axe accessibility, mobile
+.venv/Scripts/python scripts/agent_eval.py     # 60 agent scenarios via real stdio MCP (fake provider)
 ```
 Analytics tests compare every metric with an **independent Polars computation** over a
 warehouse built from the committed real sample. Ingestion tests use a fake Socrata server that
@@ -127,3 +153,6 @@ gives no warranty of accuracy.
 
 Modeling: [Forecasting](docs/modeling/FORECASTING.md) · [Delay risk](docs/modeling/DELAY_RISK.md) ·
 [Anomalies](docs/modeling/ANOMALIES.md) · [Model evaluation](docs/evaluation/MODEL_EVALUATION.md)
+
+AI: [AI readiness audit](docs/evaluation/AI_READINESS_AUDIT.md) · [Agent evaluation](docs/evaluation/AGENT_EVAL.md) ·
+[MCP architecture](docs/mcp/ARCHITECTURE.md) · [AI threat model](docs/security/AI_THREAT_MODEL.md)
