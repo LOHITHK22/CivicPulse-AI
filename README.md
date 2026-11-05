@@ -123,6 +123,28 @@ Other commands: `civicpulse extract --mode incremental`, `civicpulse status`,
 `civicpulse duckdb` (writes a `.duckdb` file of views for ad-hoc SQL), and `make help`-style
 targets in the `Makefile`.
 
+## MCP server
+`civicpulse-mcp` is a standard MCP server (official Python SDK, `mcp` 2.3) over the same warehouse:
+```bash
+.venv/Scripts/civicpulse-mcp                         # stdio (default) — for any MCP client
+CIVICPULSE_MCP_HTTP_TOKEN=<32+ random chars> .venv/Scripts/civicpulse-mcp --transport streamable-http
+                                                     # loopback 127.0.0.1:8765 only, bearer token required
+```
+It needs a built warehouse (`CIVICPULSE_DATA_DIR`). Tools, arguments and result envelope:
+[`docs/mcp/TOOLS.md`](docs/mcp/TOOLS.md). Protocol checks: [`docs/mcp/PROTOCOL_VERIFICATION.md`](docs/mcp/PROTOCOL_VERIFICATION.md).
+
+## AI Analyst
+Open `http://localhost:3000/analyst` with the API and web running. By default the analyst uses the
+**deterministic fake provider**: a rule-based stand-in that is *not* a language model. It needs no
+key, makes no network calls, and is labelled as such in the UI. Every answer shows its evidence
+(E1…), the MCP tool trace, data freshness and model warnings.
+
+> **Real-LLM integration has not been verified.** An OpenAI-compatible provider is implemented
+> (`CIVICPULSE_LLM_PROVIDER=openai`, `CIVICPULSE_LLM_MODEL`, `CIVICPULSE_OPENAI_API_KEY` in a local
+> `.env`, server-side only), but it has only been tested against a mocked HTTP endpoint. Before
+> exposing the analyst publicly, set `CIVICPULSE_AI_ACCESS_TOKEN` and the cost/price settings in
+> `.env.example`.
+
 ## Tests
 ```bash
 .venv/Scripts/python -m pytest                 # 244 offline tests (ingestion, analytics, modeling, API, MCP, agent)
@@ -145,6 +167,13 @@ gives no warranty of accuracy.
 - Model scores are associations learned from historical data. They are not causal claims and
   not operational recommendations. The delay-risk model is weak and poorly calibrated on 2026
   data (see its doc).
+
+## License
+The NYC 311 data is published by the City of New York on NYC Open Data. Its dataset page and
+metadata (`erm2-nwe9`, checked 2026-11-04) state no explicit license, and the City provides it
+"as is". The committed sample (`data/samples/`, 3,785 rows, coordinates rounded to about 100 m, no
+street addresses) is a filtered, modified extract, redistributed with attribution for testing only.
+The source code is released under the [MIT License](LICENSE); the license does not cover the NYC data.
 
 ## Documentation
 [Sources and research](docs/research/SOURCES.md) · [System design and ADR](docs/architecture/SYSTEM_DESIGN.md) ·
