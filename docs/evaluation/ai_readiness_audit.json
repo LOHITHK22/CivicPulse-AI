@@ -1,0 +1,884 @@
+{
+  "run_id": "20261104T195715Z-27ea6f",
+  "checks": [
+    {
+      "check": "forecast lightgbm test WAPE",
+      "reported": 0.3177922530943432,
+      "recomputed": 0.3177922530943433,
+      "match": true
+    },
+    {
+      "check": "forecast lightgbm test n",
+      "reported": 3640,
+      "recomputed": 3640,
+      "match": true
+    },
+    {
+      "check": "forecast lightgbm validation WAPE",
+      "reported": 0.2833176948782597,
+      "recomputed": 0.2833176948782595,
+      "match": true
+    },
+    {
+      "check": "forecast lightgbm validation n",
+      "reported": 1820,
+      "recomputed": 1820,
+      "match": true
+    },
+    {
+      "check": "forecast naive test WAPE",
+      "reported": 0.34724813523798875,
+      "recomputed": 0.34724813523798875,
+      "match": true
+    },
+    {
+      "check": "forecast naive test n",
+      "reported": 3640,
+      "recomputed": 3640,
+      "match": true
+    },
+    {
+      "check": "forecast naive validation WAPE",
+      "reported": 0.454669217317826,
+      "recomputed": 0.454669217317826,
+      "match": true
+    },
+    {
+      "check": "forecast naive validation n",
+      "reported": 1820,
+      "recomputed": 1820,
+      "match": true
+    },
+    {
+      "check": "forecast rolling_mean test WAPE",
+      "reported": 0.431988912933691,
+      "recomputed": 0.431988912933692,
+      "match": true
+    },
+    {
+      "check": "forecast rolling_mean test n",
+      "reported": 3640,
+      "recomputed": 3640,
+      "match": true
+    },
+    {
+      "check": "forecast rolling_mean validation WAPE",
+      "reported": 0.47709513582329194,
+      "recomputed": 0.47709513582329227,
+      "match": true
+    },
+    {
+      "check": "forecast rolling_mean validation n",
+      "reported": 1820,
+      "recomputed": 1820,
+      "match": true
+    },
+    {
+      "check": "forecast seasonal_naive test WAPE",
+      "reported": 0.3684772334563723,
+      "recomputed": 0.3684772334563723,
+      "match": true
+    },
+    {
+      "check": "forecast seasonal_naive test n",
+      "reported": 3640,
+      "recomputed": 3640,
+      "match": true
+    },
+    {
+      "check": "forecast seasonal_naive validation WAPE",
+      "reported": 0.33428004741394485,
+      "recomputed": 0.33428004741394485,
+      "match": true
+    },
+    {
+      "check": "forecast seasonal_naive validation n",
+      "reported": 1820,
+      "recomputed": 1820,
+      "match": true
+    },
+    {
+      "check": "forecast rolling_mean validation 90% PI coverage",
+      "reported": 0.825,
+      "recomputed": 0.825,
+      "match": true
+    },
+    {
+      "check": "forecast rolling_mean validation points with interval",
+      "reported": 1400,
+      "recomputed": 1400,
+      "match": true
+    },
+    {
+      "check": "forecast seasonal_naive test 90% PI coverage",
+      "reported": 0.871978021978022,
+      "recomputed": 0.871978021978022,
+      "match": true
+    },
+    {
+      "check": "forecast seasonal_naive test points with interval",
+      "reported": 3640,
+      "recomputed": 3640,
+      "match": true
+    },
+    {
+      "check": "forecast seasonal_naive validation 90% PI coverage",
+      "reported": 0.8528571428571429,
+      "recomputed": 0.8528571428571429,
+      "match": true
+    },
+    {
+      "check": "forecast seasonal_naive validation points with interval",
+      "reported": 1400,
+      "recomputed": 1400,
+      "match": true
+    },
+    {
+      "check": "forecast naive validation 90% PI coverage",
+      "reported": 0.8435714285714285,
+      "recomputed": 0.8435714285714285,
+      "match": true
+    },
+    {
+      "check": "forecast naive validation points with interval",
+      "reported": 1400,
+      "recomputed": 1400,
+      "match": true
+    },
+    {
+      "check": "forecast lightgbm validation 90% PI coverage",
+      "reported": 0.8457142857142858,
+      "recomputed": 0.8457142857142858,
+      "match": true
+    },
+    {
+      "check": "forecast lightgbm validation points with interval",
+      "reported": 1400,
+      "recomputed": 1400,
+      "match": true
+    },
+    {
+      "check": "forecast rolling_mean test 90% PI coverage",
+      "reported": 0.8596153846153847,
+      "recomputed": 0.8596153846153847,
+      "match": true
+    },
+    {
+      "check": "forecast rolling_mean test points with interval",
+      "reported": 3640,
+      "recomputed": 3640,
+      "match": true
+    },
+    {
+      "check": "forecast naive test 90% PI coverage",
+      "reported": 0.8497252747252747,
+      "recomputed": 0.8497252747252747,
+      "match": true
+    },
+    {
+      "check": "forecast naive test points with interval",
+      "reported": 3640,
+      "recomputed": 3640,
+      "match": true
+    },
+    {
+      "check": "forecast lightgbm test 90% PI coverage",
+      "reported": 0.8642857142857143,
+      "recomputed": 0.8642857142857143,
+      "match": true
+    },
+    {
+      "check": "forecast lightgbm test points with interval",
+      "reported": 3640,
+      "recomputed": 3640,
+      "match": true
+    },
+    {
+      "check": "forecast model selected by lowest validation WAPE",
+      "reported": "lightgbm",
+      "recomputed": "lightgbm",
+      "match": true
+    },
+    {
+      "check": "backtest rows with target != origin + horizon",
+      "reported": 0,
+      "recomputed": 0,
+      "match": true
+    },
+    {
+      "check": "validation targets end before test targets start",
+      "reported": "2025-10-29 < 2025-11-01",
+      "recomputed": "True",
+      "match": true
+    },
+    {
+      "check": "backtest actuals that differ from warehouse daily counts",
+      "reported": 0,
+      "recomputed": 0,
+      "match": true
+    },
+    {
+      "check": "delay labels that differ from warehouse recomputation",
+      "reported": 0,
+      "recomputed": 0,
+      "match": true
+    },
+    {
+      "check": "test rows created after maturity cutoff",
+      "reported": 0,
+      "recomputed": 0,
+      "match": true
+    },
+    {
+      "check": "delay split immature n",
+      "reported": 15153,
+      "recomputed": 15153,
+      "match": true
+    },
+    {
+      "check": "delay split test n",
+      "reported": 544834,
+      "recomputed": 544834,
+      "match": true
+    },
+    {
+      "check": "anomaly real-data alerts",
+      "reported": 1272,
+      "recomputed": 1272,
+      "match": true
+    },
+    {
+      "check": "anomaly actuals that differ from warehouse daily counts",
+      "reported": 0,
+      "recomputed": 0,
+      "match": true
+    }
+  ],
+  "n_checks": 42,
+  "n_failed": 0,
+  "findings": {
+    "run_id": "20261104T195715Z-27ea6f",
+    "forecast_bootstrap": {
+      "naive": {
+        "reported_ci": [
+          -0.018640143509884903,
+          0.07933819073460341
+        ],
+        "reported_significant": false,
+        "independent_ci_4000_resamples": [
+          -0.0182,
+          0.0794
+        ],
+        "independent_significant": false,
+        "agrees": true
+      },
+      "seasonal_naive": {
+        "reported_ci": [
+          0.0073421924801467696,
+          0.09420625564968904
+        ],
+        "reported_significant": true,
+        "independent_ci_4000_resamples": [
+          0.0064,
+          0.0954
+        ],
+        "independent_significant": true,
+        "agrees": true
+      },
+      "rolling_mean": {
+        "reported_ci": [
+          0.07149886224465635,
+          0.16076127074521399
+        ],
+        "reported_significant": true,
+        "independent_ci_4000_resamples": [
+          0.0722,
+          0.1637
+        ],
+        "independent_significant": true,
+        "agrees": true
+      }
+    },
+    "forecast_test_by_category": [
+      {
+        "model": "lightgbm",
+        "category_key": "heat_hot_water",
+        "wape": 0.4051720744867447
+      },
+      {
+        "model": "naive",
+        "category_key": "heat_hot_water",
+        "wape": 0.4034680966849576
+      },
+      {
+        "model": "rolling_mean",
+        "category_key": "heat_hot_water",
+        "wape": 0.4756509058546085
+      },
+      {
+        "model": "seasonal_naive",
+        "category_key": "heat_hot_water",
+        "wape": 0.4865624007981497
+      },
+      {
+        "model": "lightgbm",
+        "category_key": "noise_residential",
+        "wape": 0.24374051111796116
+      },
+      {
+        "model": "naive",
+        "category_key": "noise_residential",
+        "wape": 0.29960342719610294
+      },
+      {
+        "model": "rolling_mean",
+        "category_key": "noise_residential",
+        "wape": 0.39498670141125247
+      },
+      {
+        "model": "seasonal_naive",
+        "category_key": "noise_residential",
+        "wape": 0.26840364433832875
+      }
+    ],
+    "production_forecast": {
+      "o1": "2026-10-31",
+      "o2": "2026-10-31",
+      "t1": "2026-11-01",
+      "t2": "2026-11-07",
+      "n": "70",
+      "n_no_int": "0",
+      "m": "lightgbm"
+    },
+    "backtest_points_compared_to_warehouse": 5460,
+    "delay_splits": [
+      {
+        "split": "immature",
+        "n": 15153,
+        "rate": null,
+        "mean_risk": 0.028387624067273028
+      },
+      {
+        "split": "test",
+        "n": 544834,
+        "rate": 0.02740284196654394,
+        "mean_risk": 0.005651907162319058
+      }
+    ],
+    "heat_monthly_closure": [
+      {
+        "month": "2023-01",
+        "n": 30210,
+        "still_open_share": 0.0002,
+        "not_closed_7d_share": 0.004,
+        "closed_late_share": 0.0038
+      },
+      {
+        "month": "2023-02",
+        "n": 32929,
+        "still_open_share": 0.0004,
+        "not_closed_7d_share": 0.0019,
+        "closed_late_share": 0.0015
+      },
+      {
+        "month": "2023-03",
+        "n": 26574,
+        "still_open_share": 0.0002,
+        "not_closed_7d_share": 0.0013,
+        "closed_late_share": 0.0012
+      },
+      {
+        "month": "2023-04",
+        "n": 14556,
+        "still_open_share": 0.0005,
+        "not_closed_7d_share": 0.0022,
+        "closed_late_share": 0.0016
+      },
+      {
+        "month": "2023-05",
+        "n": 7103,
+        "still_open_share": 0.0001,
+        "not_closed_7d_share": 0.0049,
+        "closed_late_share": 0.0048
+      },
+      {
+        "month": "2023-06",
+        "n": 3236,
+        "still_open_share": 0.0003,
+        "not_closed_7d_share": 0.0241,
+        "closed_late_share": 0.0238
+      },
+      {
+        "month": "2023-07",
+        "n": 3292,
+        "still_open_share": 0.0021,
+        "not_closed_7d_share": 0.0295,
+        "closed_late_share": 0.0273
+      },
+      {
+        "month": "2023-08",
+        "n": 2799,
+        "still_open_share": 0.0007,
+        "not_closed_7d_share": 0.02,
+        "closed_late_share": 0.0193
+      },
+      {
+        "month": "2023-09",
+        "n": 3832,
+        "still_open_share": 0.0003,
+        "not_closed_7d_share": 0.0164,
+        "closed_late_share": 0.0162
+      },
+      {
+        "month": "2023-10",
+        "n": 22135,
+        "still_open_share": 0.0013,
+        "not_closed_7d_share": 0.0041,
+        "closed_late_share": 0.0028
+      },
+      {
+        "month": "2023-11",
+        "n": 47298,
+        "still_open_share": 0.0007,
+        "not_closed_7d_share": 0.0034,
+        "closed_late_share": 0.0027
+      },
+      {
+        "month": "2023-12",
+        "n": 35545,
+        "still_open_share": 0.0007,
+        "not_closed_7d_share": 0.0015,
+        "closed_late_share": 0.0008
+      },
+      {
+        "month": "2024-01",
+        "n": 51325,
+        "still_open_share": 0.0013,
+        "not_closed_7d_share": 0.0017,
+        "closed_late_share": 0.0004
+      },
+      {
+        "month": "2024-02",
+        "n": 30316,
+        "still_open_share": 0.0013,
+        "not_closed_7d_share": 0.0022,
+        "closed_late_share": 0.0009
+      },
+      {
+        "month": "2024-03",
+        "n": 24805,
+        "still_open_share": 0.0004,
+        "not_closed_7d_share": 0.0011,
+        "closed_late_share": 0.0008
+      },
+      {
+        "month": "2024-04",
+        "n": 16199,
+        "still_open_share": 0.0006,
+        "not_closed_7d_share": 0.0013,
+        "closed_late_share": 0.0007
+      },
+      {
+        "month": "2024-05",
+        "n": 6821,
+        "still_open_share": 0.0001,
+        "not_closed_7d_share": 0.0004,
+        "closed_late_share": 0.0003
+      },
+      {
+        "month": "2024-06",
+        "n": 3514,
+        "still_open_share": 0.0003,
+        "not_closed_7d_share": 0.0162,
+        "closed_late_share": 0.0159
+      },
+      {
+        "month": "2024-07",
+        "n": 3379,
+        "still_open_share": 0.0006,
+        "not_closed_7d_share": 0.0553,
+        "closed_late_share": 0.0547
+      },
+      {
+        "month": "2024-08",
+        "n": 3105,
+        "still_open_share": 0.0,
+        "not_closed_7d_share": 0.0692,
+        "closed_late_share": 0.0692
+      },
+      {
+        "month": "2024-09",
+        "n": 3350,
+        "still_open_share": 0.003,
+        "not_closed_7d_share": 0.0128,
+        "closed_late_share": 0.0099
+      },
+      {
+        "month": "2024-10",
+        "n": 19650,
+        "still_open_share": 0.0627,
+        "not_closed_7d_share": 0.0637,
+        "closed_late_share": 0.001
+      },
+      {
+        "month": "2024-11",
+        "n": 39368,
+        "still_open_share": 0.0305,
+        "not_closed_7d_share": 0.031,
+        "closed_late_share": 0.0005
+      },
+      {
+        "month": "2024-12",
+        "n": 62918,
+        "still_open_share": 0.0063,
+        "not_closed_7d_share": 0.0069,
+        "closed_late_share": 0.0006
+      },
+      {
+        "month": "2025-01",
+        "n": 67229,
+        "still_open_share": 0.0003,
+        "not_closed_7d_share": 0.001,
+        "closed_late_share": 0.0007
+      },
+      {
+        "month": "2025-02",
+        "n": 40699,
+        "still_open_share": 0.0026,
+        "not_closed_7d_share": 0.0032,
+        "closed_late_share": 0.0006
+      },
+      {
+        "month": "2025-03",
+        "n": 26276,
+        "still_open_share": 0.0135,
+        "not_closed_7d_share": 0.014,
+        "closed_late_share": 0.0004
+      },
+      {
+        "month": "2025-04",
+        "n": 16824,
+        "still_open_share": 0.0298,
+        "not_closed_7d_share": 0.0301,
+        "closed_late_share": 0.0003
+      },
+      {
+        "month": "2025-05",
+        "n": 7463,
+        "still_open_share": 0.0576,
+        "not_closed_7d_share": 0.0582,
+        "closed_late_share": 0.0005
+      },
+      {
+        "month": "2025-06",
+        "n": 4217,
+        "still_open_share": 0.0007,
+        "not_closed_7d_share": 0.0095,
+        "closed_late_share": 0.0088
+      },
+      {
+        "month": "2025-07",
+        "n": 3008,
+        "still_open_share": 0.0,
+        "not_closed_7d_share": 0.0086,
+        "closed_late_share": 0.0086
+      },
+      {
+        "month": "2025-08",
+        "n": 2929,
+        "still_open_share": 0.0,
+        "not_closed_7d_share": 0.0072,
+        "closed_late_share": 0.0072
+      },
+      {
+        "month": "2025-09",
+        "n": 3595,
+        "still_open_share": 0.0025,
+        "not_closed_7d_share": 0.005,
+        "closed_late_share": 0.0025
+      },
+      {
+        "month": "2025-10",
+        "n": 31858,
+        "still_open_share": 0.001,
+        "not_closed_7d_share": 0.0014,
+        "closed_late_share": 0.0005
+      },
+      {
+        "month": "2025-11",
+        "n": 47946,
+        "still_open_share": 0.0007,
+        "not_closed_7d_share": 0.0009,
+        "closed_late_share": 0.0002
+      },
+      {
+        "month": "2025-12",
+        "n": 63902,
+        "still_open_share": 0.0007,
+        "not_closed_7d_share": 0.0011,
+        "closed_late_share": 0.0005
+      },
+      {
+        "month": "2026-01",
+        "n": 79928,
+        "still_open_share": 0.0304,
+        "not_closed_7d_share": 0.0343,
+        "closed_late_share": 0.0038
+      },
+      {
+        "month": "2026-02",
+        "n": 59031,
+        "still_open_share": 0.0737,
+        "not_closed_7d_share": 0.0776,
+        "closed_late_share": 0.0038
+      },
+      {
+        "month": "2026-03",
+        "n": 29783,
+        "still_open_share": 0.0862,
+        "not_closed_7d_share": 0.0867,
+        "closed_late_share": 0.0005
+      },
+      {
+        "month": "2026-04",
+        "n": 19553,
+        "still_open_share": 0.0652,
+        "not_closed_7d_share": 0.0656,
+        "closed_late_share": 0.0004
+      },
+      {
+        "month": "2026-05",
+        "n": 9823,
+        "still_open_share": 0.0422,
+        "not_closed_7d_share": 0.0435,
+        "closed_late_share": 0.0012
+      },
+      {
+        "month": "2026-06",
+        "n": 4388,
+        "still_open_share": 0.0417,
+        "not_closed_7d_share": 0.046,
+        "closed_late_share": 0.0043
+      },
+      {
+        "month": "2026-07",
+        "n": 4331,
+        "still_open_share": 0.064,
+        "not_closed_7d_share": 0.0725,
+        "closed_late_share": 0.0085
+      },
+      {
+        "month": "2026-08",
+        "n": 3682,
+        "still_open_share": 0.0603,
+        "not_closed_7d_share": 0.0684,
+        "closed_late_share": 0.0081
+      },
+      {
+        "month": "2026-09",
+        "n": 4862,
+        "still_open_share": 0.059,
+        "not_closed_7d_share": 0.0732,
+        "closed_late_share": 0.0142
+      },
+      {
+        "month": "2026-10",
+        "n": 26454,
+        "still_open_share": 0.136,
+        "not_closed_7d_share": 0.1364,
+        "closed_late_share": 0.0005
+      }
+    ],
+    "source_update_bulk_rewrite": [
+      {
+        "created_year": 2023,
+        "category_key": "heat_hot_water",
+        "n": 229509,
+        "n_rewritten_2025_12_26": 229509,
+        "first_update": "2025-12-26 17:23:45.313+00",
+        "last_update": "2025-12-26 19:19:52.762+00"
+      },
+      {
+        "created_year": 2023,
+        "category_key": "noise_residential",
+        "n": 298453,
+        "n_rewritten_2025_12_26": 298453,
+        "first_update": "2025-12-26 17:17:19.696+00",
+        "last_update": "2025-12-26 19:19:52.762+00"
+      },
+      {
+        "created_year": 2024,
+        "category_key": "heat_hot_water",
+        "n": 264750,
+        "n_rewritten_2025_12_26": 264740,
+        "first_update": "2025-12-26 17:22:11.709+00",
+        "last_update": "2026-03-09 01:31:54.659+00"
+      },
+      {
+        "created_year": 2024,
+        "category_key": "noise_residential",
+        "n": 379296,
+        "n_rewritten_2025_12_26": 379296,
+        "first_update": "2025-12-26 17:22:11.709+00",
+        "last_update": "2025-12-26 18:50:05.79+00"
+      },
+      {
+        "created_year": 2025,
+        "category_key": "heat_hot_water",
+        "n": 315946,
+        "n_rewritten_2025_12_26": 160014,
+        "first_update": "2025-12-26 18:32:32.021+00",
+        "last_update": "2026-11-02 02:32:46.099+00"
+      },
+      {
+        "created_year": 2025,
+        "category_key": "noise_residential",
+        "n": 463349,
+        "n_rewritten_2025_12_26": 450113,
+        "first_update": "2025-12-26 17:23:13.791+00",
+        "last_update": "2026-05-08 01:33:28.225+00"
+      },
+      {
+        "created_year": 2026,
+        "category_key": "heat_hot_water",
+        "n": 241835,
+        "n_rewritten_2025_12_26": 0,
+        "first_update": "2026-01-27 02:51:48.925+00",
+        "last_update": "2026-11-02 02:38:24.198+00"
+      },
+      {
+        "created_year": 2026,
+        "category_key": "noise_residential",
+        "n": 318155,
+        "n_rewritten_2025_12_26": 0,
+        "first_update": "2026-01-08 02:31:32.944+00",
+        "last_update": "2026-11-02 02:38:25.711+00"
+      }
+    ],
+    "heat_resolution_minus_closed_hours_median": [
+      {
+        "month": "2025-05",
+        "median_hours": -16.0
+      },
+      {
+        "month": "2025-06",
+        "median_hours": -15.6
+      },
+      {
+        "month": "2025-07",
+        "median_hours": -14.9
+      },
+      {
+        "month": "2025-08",
+        "median_hours": -13.6
+      },
+      {
+        "month": "2025-09",
+        "median_hours": 0.0
+      },
+      {
+        "month": "2025-10",
+        "median_hours": 0.0
+      },
+      {
+        "month": "2025-11",
+        "median_hours": 0.0
+      },
+      {
+        "month": "2025-12",
+        "median_hours": 0.0
+      }
+    ],
+    "open_status_values": [
+      {
+        "created_year": 2023,
+        "status": "Open",
+        "n": 130
+      },
+      {
+        "created_year": 2024,
+        "status": "Open",
+        "n": 2967
+      },
+      {
+        "created_year": 2025,
+        "status": "Open",
+        "n": 1532
+      },
+      {
+        "created_year": 2026,
+        "status": "Open",
+        "n": 15606
+      }
+    ],
+    "late_closures_over_30d_heat": 203,
+    "anomalies": {
+      "n_alerts": 1272,
+      "n_days": 15792,
+      "spikes": 1190,
+      "heat_alerts_in_october": 469
+    },
+    "anomaly_synthetic_reported": [
+      {
+        "alert_rate_uninjected_days": 0.10027696318018899,
+        "alerts_injected": 42,
+        "alerts_uninjected": 1231,
+        "days_uninjected": 12276,
+        "detector": "rolling_median_mad",
+        "n_injected": 144,
+        "recall": 0.2638888888888889,
+        "threshold": 3.0
+      },
+      {
+        "alert_rate_uninjected_days": 0.07966764418377321,
+        "alerts_injected": 38,
+        "alerts_uninjected": 978,
+        "days_uninjected": 12276,
+        "detector": "rolling_median_mad",
+        "n_injected": 144,
+        "recall": 0.2361111111111111,
+        "threshold": 3.5
+      },
+      {
+        "alert_rate_uninjected_days": 0.06541218637992832,
+        "alerts_injected": 33,
+        "alerts_uninjected": 803,
+        "days_uninjected": 12276,
+        "detector": "rolling_median_mad",
+        "n_injected": 144,
+        "recall": 0.2013888888888889,
+        "threshold": 4.0
+      },
+      {
+        "alert_rate_uninjected_days": 0.09359726295210166,
+        "alerts_injected": 57,
+        "alerts_uninjected": 1149,
+        "days_uninjected": 12276,
+        "detector": "seasonal_mad",
+        "n_injected": 144,
+        "recall": 0.3611111111111111,
+        "threshold": 3.0
+      },
+      {
+        "alert_rate_uninjected_days": 0.07714239165852069,
+        "alerts_injected": 47,
+        "alerts_uninjected": 947,
+        "days_uninjected": 12276,
+        "detector": "seasonal_mad",
+        "n_injected": 144,
+        "recall": 0.2986111111111111,
+        "threshold": 3.5
+      },
+      {
+        "alert_rate_uninjected_days": 0.06394591072010426,
+        "alerts_injected": 41,
+        "alerts_uninjected": 785,
+        "days_uninjected": 12276,
+        "detector": "seasonal_mad",
+        "n_injected": 144,
+        "recall": 0.2569444444444444,
+        "threshold": 4.0
+      }
+    ]
+  }
+}
