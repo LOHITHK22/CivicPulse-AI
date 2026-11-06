@@ -54,11 +54,43 @@ export interface AnalystWarning {
 
 export interface GroundingAttempt {
   ok: boolean;
+  semantic?: SemanticValidation;
   citations_used: string[];
   invalid_citations: string[];
   numbers_checked: number;
   unsupported_numbers: string[];
   policy_violations: string[];
+}
+
+export interface ClaimRecord {
+  id: string;
+  type: "measurement" | "derived" | "comparison" | "evidence_text";
+  status: string;
+  reason: string;
+  evidence_ids: string[];
+  fact_id?: string | null;
+  metric_id: string | null;
+  geography_id: string | null;
+  category_id: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  value: number | string | null;
+  unit: string | null;
+  snapshot_id?: string | null;
+  model_version?: string | null;
+  method?: string | null;
+  operation?: string | null;
+  operands?: string[];
+  relation?: string | null;
+}
+
+export interface SemanticValidation {
+  ok: boolean;
+  structured: boolean;
+  claims_total: number;
+  claims_valid: number;
+  narrative_violations: string[];
+  parse_errors: string[];
 }
 
 export interface Investigation {
@@ -71,8 +103,9 @@ export interface Investigation {
   validation: { ok?: boolean; attempts?: GroundingAttempt[]; regenerations?: number; fallback?: GroundingAttempt; screening?: string };
   warnings: AnalystWarning[];
   periods: { phrase: string; start: string; end: string; basis: string; covered: string; note: string }[];
-  freshness: { data_cutoff?: string; last_complete_date?: string; first_date?: string; build_id?: string; live?: boolean; today?: string };
+  freshness: { data_cutoff?: string; last_complete_date?: string; first_date?: string; build_id?: string; live?: boolean; today?: string; model_versions?: Record<string, string> };
   charts: ChartSpec[];
+  claims?: ClaimRecord[];
   provider: { name: string; model: string | null; live_llm: boolean };
   usage: { input_tokens: number; output_tokens: number; tool_calls: number; provider_calls: number; estimated_cost_usd: number };
   mcp: { protocol_version?: string; server?: string; server_version?: string; transport?: string; tools_offered?: number };
@@ -85,6 +118,8 @@ export interface AnalystStatus {
   model: string | null;
   live_llm: boolean;
   auth_required: boolean;
+  disabled_reason?: string | null;
+  paid_ai?: { enabled: boolean; blockers: string[] };
   limits: { max_tool_calls: number; max_output_tokens: number; request_timeout_s: number; max_question_chars: number };
   tools: string[];
   capabilities: { capability: string; class: string }[];

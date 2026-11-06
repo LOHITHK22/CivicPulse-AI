@@ -1,10 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 
 import { TimeSeriesChart } from "@/components/charts";
 import { ApiError, postJson, useApi } from "@/hooks/useApi";
-import type { AnalystStatus, AnalystWarning, ChartSpec, EvidenceItem, Investigation, TraceStep } from "@/lib/ai-types";
+import type { AnalystStatus, AnalystWarning, ChartSpec, ClaimRecord, EvidenceItem, Investigation, TraceStep } from "@/lib/ai-types";
+import {
+  DEMO_BANNER, dashboardLinks, fmtClaimValue, fmtPeriod, isDemoProvider, modelNotes, progressLabel, reportUrl,
+  verifiedAnswerText,
+} from "@/lib/analyst";
 import { SERIES_COLORS, fmtInt } from "@/lib/format";
 
 export const SUGGESTED_QUESTIONS = [
@@ -191,6 +196,60 @@ function EvidenceCard({ ev, open, onToggle, cardRef }: {
   );
 }
 
+function ClaimsTable({ claims, id }: { claims: ClaimRecord[]; id: string }) {
+  return (
+    <div id={id} className="mt-2 max-h-72 overflow-auto rounded-lg border border-border">
+      <table className="w-full min-w-[560px] text-left text-xs">
+        <caption className="sr-only">Claims in this answer that passed deterministic validation against the cited evidence</caption>
+        <thead className="bg-surface-2 text-ink-3">
+          <tr>
+            {["Claim", "Metric", "Geography", "Category", "Period", "Value", "Evidence", "Check"].map((h) => (
+              <th key={h} scope="col" className="px-2 py-1.5 font-medium">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="tabular text-ink-2">
+          {claims.map((c) => (
+            <tr key={c.id} className="border-t border-border">
+              <td className="px-2 py-1 font-semibold text-ink">{c.id}</td>
+              <td className="px-2 py-1 font-mono">{c.metric_id ?? c.operation ?? "—"}</td>
+              <td className="px-2 py-1">{c.geography_id ?? "—"}</td>
+              <td className="px-2 py-1">{c.category_id ?? "—"}</td>
+              <td className="px-2 py-1">{fmtPeriod(c)}</td>
+              <td className="px-2 py-1 text-ink">{fmtClaimValue(c.value, c.unit)}</td>
+              <td className="px-2 py-1">{c.evidence_ids.join(", ") || "—"}</td>
+              <td className="px-2 py-1 text-[color:var(--status-good)]">{c.status === "valid" ? "verified" : c.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ModelNotes({ notes }: { notes: string[] }) {
+  if (!notes.length) return null;
+  return (
+    <ul aria-label="How to read the model outputs" className="mt-3 list-disc space-y-1 rounded-lg border border-border bg-surface-2/40 py-2 pl-7 pr-3 text-xs text-ink-2">
+      {notes.map((n) => <li key={n}>{n}</li>)}
+    </ul>
+  );
+}
+
+function Progress() {
+  const [started] = useState(() => Date.now());
+  const [now, setNow] = useState(started);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return <p className="text-xs text-ink-3">{progressLabel(now - started)}</p>;
+}
+
+function linkClass() {
+  return "inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border-strong px-3 py-1.5 text-xs text-ink hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--accent-cyan)]";
+}
+
 function AnalystChart({ chart }: { chart: ChartSpec }) {
   const points = chart.series.flatMap((s) => s.points.filter((p) => p.y != null).map((p) => ({ period: p.x, key: s.name, value: p.y as number })));
   const colors = Object.fromEntries(chart.series.map((s, i) => [s.name, SERIES_COLORS[i % SERIES_COLORS.length]]));
@@ -213,6 +272,9 @@ function TracePanel({ result }: { result?: Investigation }) {
   }
   const attempts = result.validation.attempts ?? [];
   const last = attempts[attempts.length - 1];
+  const evidenceById = Object.fromEntries(result.evidence.map((e) => [e.evidence_id, e]));
+  const sem = last?.semantic;
+  const versions = Object.entries(result.freshness.model_versions ?? {});
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -240,6 +302,8 @@ function TracePanel({ result }: { result?: Investigation }) {
                   {t.arguments && <div><dt className="inline text-ink-3">Arguments (sanitized): </dt><dd className="inline break-all font-mono">{JSON.stringify(t.arguments)}</dd></div>}
                   {t.data_source && <div><dt className="inline text-ink-3">Data source: </dt><dd className="inline">{t.data_source}</dd></div>}
                   {t.model_version && <div><dt className="inline text-ink-3">Model version: </dt><dd className="inline font-mono">{t.model_version}</dd></div>}
+                  {t.evidence_id && evidenceById[t.evidence_id]?.data_cutoff && <div><dt className="inline text-ink-3">Data cutoff: </dt><dd className="inline">{evidenceById[t.evidence_id].data_cutoff} (NYC)</dd></div>}
+                  {t.evidence_id && evidenceById[t.evidence_id]?.data_build_id && <div><dt className="inline text-ink-3">Snapshot: </dt><dd className="inline font-mono">{evidenceById[t.evidence_id].data_build_id}</dd></div>}
                   {t.capability && <div><dt className="inline text-ink-3">Capability: </dt><dd className="inline">{t.capability}</dd></div>}
                   {t.error_kind && <div><dt className="inline text-ink-3">Error kind: </dt><dd className="inline">{t.error_kind}</dd></div>}
                   {t.message && <div><dt className="inline text-ink-3">Detail: </dt><dd className="inline">{t.message}</dd></div>}
@@ -252,12 +316,20 @@ function TracePanel({ result }: { result?: Investigation }) {
       <div className="rounded-md border border-border p-2.5 text-[11px] text-ink-2">
         <p className="font-medium text-ink">Validation</p>
         {last ? (
+          <>
           <p>{last.ok ? "Passed" : "Failed"}: {last.numbers_checked} numbers checked against cited evidence
             {last.citations_used.length ? ` (${last.citations_used.join(", ")})` : ""}; {result.validation.regenerations ?? 0} regeneration(s).
             {!last.ok && last.unsupported_numbers.length > 0 && ` Unsupported: ${last.unsupported_numbers.join(", ")}.`}
             {!last.ok && last.policy_violations.length > 0 && ` Policy: ${last.policy_violations.join("; ")}.`}
             {result.validation.fallback && ` Fallback summary check: ${result.validation.fallback.ok ? "passed" : "failed"}.`}</p>
+          {sem && (
+            <p className="mt-1">Claims: {sem.claims_valid} of {sem.claims_total} valid (metric, geography, category, period, unit, snapshot, model version)
+              {sem.narrative_violations.length > 0 ? `; prose issues: ${sem.narrative_violations.slice(0, 3).join("; ")}` : "; prose adds no numbers of its own"}.</p>
+          )}
+          </>
         ) : <p>{result.validation.screening ? `Input screening: ${result.validation.screening}` : "No answer was validated."}</p>}
+        <p className="mt-1">Data cutoff {result.freshness.data_cutoff ?? "—"} NYC · snapshot <span className="font-mono">{result.freshness.build_id ?? "—"}</span>
+          {versions.length > 0 && <> · models {versions.map(([k, v]) => `${k} ${v}`).join(", ")}</>}</p>
         <p className="mt-1 text-ink-3">
           {result.usage.tool_calls} tool call(s) · {result.usage.provider_calls} provider call(s) · {fmtInt(result.usage.input_tokens)} in / {fmtInt(result.usage.output_tokens)} out tokens · {(result.duration_ms / 1000).toFixed(1)} s
         </p>
@@ -271,7 +343,9 @@ function TurnView({ turn, selected, onSelect, onRetry }: {
 }) {
   const [openEvidence, setOpenEvidence] = useState<Record<string, boolean>>({});
   const [showEvidence, setShowEvidence] = useState(false);
+  const [showClaims, setShowClaims] = useState(false);
   const [copied, setCopied] = useState(false);
+  const claimsId = useId();
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
   const r = turn.result;
 
@@ -285,9 +359,11 @@ function TurnView({ turn, selected, onSelect, onRetry }: {
       el?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
     });
   };
+  const verifiedText = r ? verifiedAnswerText(r) : null;
+  const verifiedClaims = (r?.claims ?? []).filter((c) => c.status === "valid");
   const copy = async () => {
-    if (!r) return;
-    const text = `Q: ${r.question}\n\n${r.answer}\n\nEvidence:\n${r.evidence.map((e) => `[${e.evidence_id}] ${e.tool}: ${e.summary}`).join("\n")}\n\nData cutoff ${r.freshness.data_cutoff ?? "?"} (snapshot, not live).`;
+    if (!verifiedText) return;
+    const text = verifiedText;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -304,7 +380,7 @@ function TurnView({ turn, selected, onSelect, onRetry }: {
       <p className="text-sm font-medium text-ink"><span className="text-ink-3">Q · </span>{turn.question}</p>
       {turn.state === "loading" && (
         <div role="status" aria-live="polite" className="mt-3 space-y-2">
-          <p className="text-xs text-ink-3">Investigating: calling MCP tools and checking evidence…</p>
+          <Progress />
           <div className="skeleton h-4 w-11/12" aria-hidden="true" /><div className="skeleton h-4 w-9/12" aria-hidden="true" /><div className="skeleton h-4 w-10/12" aria-hidden="true" />
         </div>
       )}
@@ -324,8 +400,12 @@ function TurnView({ turn, selected, onSelect, onRetry }: {
             {r.freshness.data_cutoff && (
               <span className="text-[11px] text-ink-3">Data to {r.freshness.data_cutoff} NYC · snapshot, not live</span>
             )}
+            {isDemoProvider(r.provider) && (
+              <span className="rounded-full border border-[color:var(--status-warning)]/60 px-2 py-0.5 text-[11px] text-[color:var(--status-warning)]">Demonstration Mode</span>
+            )}
           </div>
           <Warnings warnings={r.warnings} />
+          <ModelNotes notes={modelNotes(r)} />
           <AnswerText text={r.answer} onCite={cite} />
           {r.charts.length > 0 && <div className="mt-3 grid gap-3 lg:grid-cols-2">{r.charts.map((c, i) => <AnalystChart key={i} chart={c} />)}</div>}
           <div className="mt-3 flex flex-wrap gap-2">
@@ -334,8 +414,26 @@ function TurnView({ turn, selected, onSelect, onRetry }: {
                 <Icon d="M4 6h16M4 12h16M4 18h10" />{showEvidence ? "Hide evidence" : `View evidence (${r.evidence.length})`}
               </Button>
             )}
-            <Button onClick={copy} label="Copy answer with evidence"><Icon d="M8 8h12v12H8zM4 16V4h12" />{copied ? "Copied" : "Copy"}</Button>
+            {verifiedClaims.length > 0 && (
+              <button type="button" aria-expanded={showClaims} aria-controls={claimsId} onClick={() => setShowClaims((v) => !v)} className={linkClass()}>
+                <Icon d="M5 12l4 4 10-10" />{showClaims ? "Hide verified claims" : `Verified claims (${verifiedClaims.length})`}
+              </button>
+            )}
+            <Button onClick={copy} disabled={!verifiedText} label={verifiedText ? "Copy verified answer" : "Copy unavailable: answer not verified"}>
+              <Icon d="M8 8h12v12H8zM4 16V4h12" />{copied ? "Copied" : "Copy verified answer"}
+            </Button>
             {(r.status === "error" || r.status === "fallback") && <Button onClick={onRetry}>Retry</Button>}
+          </div>
+          {showClaims && verifiedClaims.length > 0 && <ClaimsTable claims={verifiedClaims} id={claimsId} />}
+          <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Report and navigation">
+            <span className="text-[11px] text-ink-3">Report:</span>
+            <a className={linkClass()} href={reportUrl(r.investigation_id, "markdown")} download>Markdown</a>
+            <a className={linkClass()} href={reportUrl(r.investigation_id, "html", false)} target="_blank" rel="noopener noreferrer">Print view<span className="sr-only"> (opens in a new tab)</span></a>
+            <a className={linkClass()} href={reportUrl(r.investigation_id, "json")} download>JSON</a>
+            <Link className={linkClass()} href="/about#methodology">Methodology</Link>
+            {dashboardLinks(r).map((l) => (
+              <Link key={l.href} className={linkClass()} href={l.href}>Open {l.label}</Link>
+            ))}
           </div>
           {showEvidence && (
             <div className="mt-3 space-y-2" role="group" aria-label="Evidence">
@@ -415,12 +513,18 @@ export function Analyst() {
             <span>
               Provider: <strong className="text-ink">{status.data.provider}</strong>
               {status.data.model ? ` (${status.data.model})` : ""}
-              {!status.data.live_llm && status.data.enabled && " · deterministic test provider, not a language model"}
-              {!status.data.enabled && " · analyst disabled"}
+              {!status.data.enabled && ` · analyst disabled${status.data.disabled_reason ? ` (${status.data.disabled_reason})` : ""}`}
             </span>
           )}
           {status.status === "error" && <span className="text-[color:var(--status-critical)]">Analyst status unavailable: {status.error.message}</span>}
         </section>
+
+        {status.status === "success" && status.data.enabled && isDemoProvider(status.data) && (
+          <p role="note" data-testid="demo-banner"
+            className="rounded-xl border border-[color:var(--status-warning)]/60 bg-[color:var(--status-warning)]/10 px-4 py-3 text-sm font-semibold text-ink">
+            {DEMO_BANNER}
+          </p>
+        )}
 
         <section aria-label="Ask a question" className="rounded-xl border border-border bg-surface-1 p-4 sm:p-5">
           <form onSubmit={(e) => { e.preventDefault(); void run(input); }}>
@@ -474,7 +578,8 @@ export function Analyst() {
           <h2 className="mb-2 text-sm font-semibold text-ink">How answers are checked</h2>
           <ul className="list-disc space-y-1 pl-4">
             <li>Only {status.data?.tools.length ?? 10} allow-listed, read-only MCP tools; no SQL, files or commands.</li>
-            <li>Every number must appear in the evidence its sentence cites; otherwise the answer is regenerated or replaced by verified tool summaries.</li>
+            <li>Every number is a structured claim checked against MCP evidence (metric, geography, category, period, unit, snapshot, model version); prose may not add numbers. Failing answers are regenerated once or replaced by a verified summary.</li>
+            <li>Reports contain only verified claims and checksummed evidence and can be re-verified offline without the language model.</li>
             <li>Anomaly flags are statistical, not confirmed incidents. The closure-delay model is restricted to research metrics.</li>
           </ul>
         </div>
