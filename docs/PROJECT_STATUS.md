@@ -1,8 +1,37 @@
 # Project status
 
-Last updated: 2026-11-04. Current milestone: **3, implemented and awaiting review** (branch
-`feature/milestone-3-mcp-analyst`, not merged). Milestones 1 and 2 were approved (M2 with model-safety
-restrictions). Milestone 4 has **not** been started.
+Last updated: 2026-11-06. Current milestone: **4, implemented and awaiting review** (branch
+`feature/milestone-4-product-completion`, PR to `main`, not merged, not deployed). Milestones 1–3 were approved.
+
+## Milestone 4: Product completion
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Semantic evidence validation (structured claims, derived values recomputed, prose without numbers) | Implemented, tested (fake provider) | `docs/evaluation/SEMANTIC_GROUNDING.md` |
+| Geographic Intelligence (MapLibre, DCP boundaries, volume/change modes, ranking table, detail + trend, caveats) | Implemented, browser-verified desktop + mobile | `apps/web/tests/geo.spec.ts`, `docs/screenshots/geo.png` |
+| Investigation reports (JSON schema v1, Markdown, print HTML, checksums, offline re-verification) | Implemented, tested | `packages/agent/tests/test_report.py` |
+| AI Analyst UX (Demonstration Mode banner, verified claims, copy verified answer, report export, trace with validation/cutoff/model versions) | Implemented, browser-verified | `apps/web/tests/analyst.spec.ts` |
+| MCP performance | Measured; per-request stdio kept; pool **planned, not implemented** | `docs/performance/MCP_BENCHMARKS.md` |
+| Security (paid-AI kill switch, fail-closed config, concurrency caps, injection tests) | Implemented, tested; limits are **process-local** | `docs/security/AI_THREAT_MODEL.md` |
+| Real-LLM smoke test | Script ready, mock-tested; **real run BLOCKED** (no authorization, no credentials) | `scripts/llm_smoke_test.py` |
+| Deployment | **Not deployed**; readiness and blockers documented | `docs/deployment/DEPLOYMENT_READINESS.md` |
+
+### Verification (2026-11-05/06)
+- `pytest`: 344 passed, 3 deselected (`live` NYC Open Data tests, opt-in); ruff check, ruff format, `mypy --strict` clean.
+- Frontend: tsc, eslint, `npm run test:unit` (9/9), `next build` clean.
+- Playwright: 48/48 (desktop + mobile, **1 worker** because of ~1.5–2 GB free RAM; full parallelism not run
+  locally). No browser-facing code changed after that run.
+- Agent evaluation: 70/70 (fake provider, real stdio MCP).
+- Docker Compose: images build; health, geo, investigation over in-container stdio MCP, reports: OK.
+- gitleaks 8.30.1: 0 findings in branch and full history; 0 in tracked files (226 matches only in ignored
+  `.venv` and `.next` build output).
+
+### Known limitations (Milestone 4)
+- No live LLM has been run; all AI results use the deterministic fake provider.
+- Rate limits, budget, concurrency gate and report store are per process, not global.
+- Each investigation spends ~2.3 s on MCP subprocess lifecycle (measured); a session pool is not implemented.
+- The browser has no access token; with `CIVICPULSE_AI_ACCESS_TOKEN` set, the UI needs server-side token injection.
+- DQ040/DQ042 data-quality warnings are unchanged and still reported.
 
 ## Milestone 3: Real MCP server + evidence-grounded AI analyst
 
@@ -102,6 +131,5 @@ restrictions). Milestone 4 has **not** been started.
 - Licensing terms page could not be retrieved during research. Attribution is applied
   conservatively, and the terms need re-verifying before public launch.
 
-## Milestones 4–5: not started
-- **M4:** MapLibre geographic explorer, investigation reports, performance polish.
-- **M5:** hosting research, deployment, case study, evidence-based resume bullets.
+## Milestone 5: not started
+- Hosting research, deployment, case study, evidence-based resume bullets.

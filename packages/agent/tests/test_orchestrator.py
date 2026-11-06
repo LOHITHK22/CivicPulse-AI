@@ -77,7 +77,13 @@ def test_borough_question_matches_analytics_service(gateway, last_day, sample_mo
     rows = {row["borough"]: row["requests"] for row in r.evidence[0]["data"]["rows"]}
     assert rows == expected
     top = max(expected, key=lambda b: expected[b])
-    assert f"{top}: {expected[top]:,} requests" in r.answer
+    assert f"{top}, residential noise, {period['start']} to " in r.answer
+    assert f": {expected[top]:,} requests" in r.answer
+    # Every number came through a validated claim whose dimensions match the analytics service.
+    top_claim = next(c for c in r.claims if c["metric_id"] == "request_count" and c["geography_id"] == top.lower())
+    assert top_claim["status"] == "valid" and top_claim["value"] == expected[top]
+    assert top_claim["category_id"] == "noise_residential" and top_claim["evidence_ids"] == ["E1"]
+    assert r.validation["attempts"][-1]["semantic"]["ok"]
     assert r.charts and r.charts[0]["kind"] == "bar"
     assert r.freshness["live"] is False and r.provider == {
         "name": "fake",
@@ -223,3 +229,36 @@ def test_real_stdio_transport(sample_models, last_day):
     r = ask(_orch(gw, last_day), "How fresh is the data?")
     assert r.status == "answered" and r.mcp["protocol_version"] and r.mcp["server"] == "civicpulse-mcp"
     assert tools_called(r) == ["get_dataset_quality"]
+
+
+COMPARE_Q = "How did Brooklyn compare with Queens for noise last month?"
+
+
+@pytest.mark.parametrize(
+    ("fault", "question", "expected"),
+    [
+        ("wrong_borough", COMPARE_Q, ("value_mismatch", "geography_mismatch")),
+        ("wrong_category", COMPARE_Q, ("category_mismatch",)),
+        ("wrong_period", COMPARE_Q, ("period_mismatch",)),
+        ("wrong_unit", COMPARE_Q, ("unit_mismatch",)),
+        ("missing_citation", COMPARE_Q, ("missing_citation",)),
+        ("wrong_denominator", COMPARE_Q, ("invalid_denominator",)),
+        ("wrong_direction", COMPARE_Q, ("direction_incorrect",)),
+        ("stale_model", "What does the model forecast for heat in the Bronx next week?", ("model_version_mismatch",)),
+    ],
+)
+def test_semantic_misattribution_is_rejected_then_repaired(gateway, last_day, fault, question, expected):
+    r = ask(_orch(gateway, last_day, fault=fault), question)
+    first = r.validation["attempts"][0]
+    assert not first["ok"]
+    statuses = {c["status"] for c in first["semantic"]["claims"]}
+    assert statuses & set(expected), first["semantic"]
+    assert r.status == "answered" and r.validation["ok"] and r.validation["regenerations"] == 1
+    assert all(c["status"] == "valid" for c in r.claims)
+
+
+def test_invented_percentage_in_prose_is_rejected(gateway, last_day):
+    r = ask(_orch(gateway, last_day, fault="invented_percentage"), COMPARE_Q)
+    first = r.validation["attempts"][0]
+    assert any("23.4%" in v for v in first["semantic"]["narrative_violations"])
+    assert r.status == "answered" and "23.4%" not in r.answer

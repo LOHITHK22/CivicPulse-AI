@@ -4,11 +4,10 @@ A personal engineering project. It is an end-to-end analytics platform on **real
 requests** (residential noise, heat/hot water). It is built in milestones, and only what is
 listed as done below has been implemented and verified.
 
-> **Status: Milestone 3 (MCP server + evidence-grounded AI analyst) implemented and awaiting
-> review.** Milestones 1–2 (analytics, forecasts, closure-delay research model, anomalies) were
-> approved. Maps and reports (M4) are **not built yet**; their page says so. The AI analyst has been
-> verified only with a deterministic **fake** provider. No real LLM has been run through it. See
-> [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md).
+> **Status: Milestone 4 (geographic intelligence, semantic grounding, verified reports, paid-AI
+> controls) implemented and awaiting review.** Milestones 1–3 were approved. The AI analyst has been
+> verified only with a deterministic **fake** provider; no real LLM has been run through it (the
+> authorized smoke test is blocked pending approval). See [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md).
 
 ![Operations overview](docs/screenshots/overview.png)
 
@@ -139,18 +138,30 @@ Open `http://localhost:3000/analyst` with the API and web running. By default th
 key, makes no network calls, and is labelled as such in the UI. Every answer shows its evidence
 (E1…), the MCP tool trace, data freshness and model warnings.
 
-> **Real-LLM integration has not been verified.** An OpenAI-compatible provider is implemented
-> (`CIVICPULSE_LLM_PROVIDER=openai`, `CIVICPULSE_LLM_MODEL`, `CIVICPULSE_OPENAI_API_KEY` in a local
-> `.env`, server-side only), but it has only been tested against a mocked HTTP endpoint. Before
-> exposing the analyst publicly, set `CIVICPULSE_AI_ACCESS_TOKEN` and the cost/price settings in
-> `.env.example`.
+The UI shows **"Demonstration Mode — deterministic analytical assistant, not a live LLM."** whenever the
+fake provider is active. Every number in an answer is a structured claim validated against MCP evidence
+([semantic grounding](docs/evaluation/SEMANTIC_GROUNDING.md)); answers can be exported as Markdown, print HTML or a
+checksummed JSON report that `python -m civicpulse_agent.report verify` re-validates offline.
+
+> **Real-LLM integration has not been verified.** An OpenAI-compatible provider is implemented but tested only
+> against mocked HTTP. Paid use is off by default and fails closed: it needs `CIVICPULSE_LLM_PROVIDER=openai`,
+> `CIVICPULSE_AI_PAID_ENABLED=true`, an API key, `CIVICPULSE_AI_ACCESS_TOKEN`, a positive daily budget and both
+> token prices (all server-side, see `.env.example`). `scripts/llm_smoke_test.py` runs one bounded paid
+> investigation only with explicit authorization; it has not been run.
+
+## Geographic Intelligence
+`/geo` maps borough-level 311 counts on NYC DCP borough boundaries (MapLibre, no basemap tiles, no addresses or
+point locations), with volume and period-over-period change modes, a sortable ranking table, borough detail with
+trend and comparison, and interpretation caveats (reports are not incidents; raw counts are not rates).
 
 ## Tests
 ```bash
-.venv/Scripts/python -m pytest                 # 244 offline tests (ingestion, analytics, modeling, API, MCP, agent)
+.venv/Scripts/python -m pytest                 # 344 offline tests (ingestion, analytics, modeling, API, MCP, agent)
 .venv/Scripts/python -m pytest -m live         # opt-in checks against the real API
-cd apps/web && npx playwright test             # 37 browser tests incl. AI Analyst, axe accessibility, mobile
-.venv/Scripts/python scripts/agent_eval.py     # 60 agent scenarios via real stdio MCP (fake provider)
+cd apps/web && npx playwright test             # 48 browser tests incl. geo, AI Analyst, axe accessibility, mobile
+cd apps/web && npm run test:unit               # analyst helper unit tests (node:test)
+.venv/Scripts/python scripts/agent_eval.py     # 70 agent scenarios via real stdio MCP (fake provider)
+.venv/Scripts/python scripts/mcp_benchmark.py  # MCP latency/memory benchmark (real stdio subprocesses)
 ```
 Analytics tests compare every metric with an **independent Polars computation** over a
 warehouse built from the committed real sample. Ingestion tests use a fake Socrata server that
@@ -184,4 +195,6 @@ Modeling: [Forecasting](docs/modeling/FORECASTING.md) · [Delay risk](docs/model
 [Anomalies](docs/modeling/ANOMALIES.md) · [Model evaluation](docs/evaluation/MODEL_EVALUATION.md)
 
 AI: [AI readiness audit](docs/evaluation/AI_READINESS_AUDIT.md) · [Agent evaluation](docs/evaluation/AGENT_EVAL.md) ·
-[MCP architecture](docs/mcp/ARCHITECTURE.md) · [AI threat model](docs/security/AI_THREAT_MODEL.md)
+[MCP architecture](docs/mcp/ARCHITECTURE.md) · [AI threat model](docs/security/AI_THREAT_MODEL.md) ·
+[Semantic grounding](docs/evaluation/SEMANTIC_GROUNDING.md) · [MCP benchmarks](docs/performance/MCP_BENCHMARKS.md) ·
+[Deployment readiness](docs/deployment/DEPLOYMENT_READINESS.md) · [Borough boundaries provenance](docs/data/borough_boundaries.json)

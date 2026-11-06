@@ -112,3 +112,48 @@ test("no serious or critical axe violations on an answered investigation", async
   const serious = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
   expect(serious.map((v) => `${v.id}: ${v.nodes.length} nodes - ${v.help}`)).toEqual([]);
 });
+
+test.describe("AI analyst: disclosure, verified claims and reports", () => {
+  test("discloses demonstration mode with the exact banner text", async ({ page }) => {
+    await page.goto("/analyst");
+    await expect(page.getByTestId("demo-banner")).toHaveText(
+      "Demonstration Mode — deterministic analytical assistant, not a live LLM.",
+    );
+  });
+
+  test("verified claims table, copy, report downloads and dashboard links", async ({ page }) => {
+    await page.goto("/analyst");
+    await ask(page, "Which borough had the most residential noise complaints last month?");
+    const article = page.getByRole("article").first();
+    await expect(article.getByText("Answered · evidence check passed")).toBeVisible({ timeout: 45_000 });
+    await expect(article.getByText("Demonstration Mode", { exact: true })).toBeVisible();
+    await article.getByRole("button", { name: /Verified claims \(\d+\)/ }).click();
+    const table = article.getByRole("table");
+    await expect(table.getByRole("columnheader", { name: "Geography" })).toBeVisible();
+    await expect(table.getByText("verified").first()).toBeVisible();
+    await expect(article.getByRole("button", { name: "Copy verified answer" })).toBeEnabled();
+    const md = article.getByRole("link", { name: "Markdown" });
+    const href = await md.getAttribute("href");
+    expect(href).toMatch(/^\/api\/v1\/ai\/investigations\/[0-9a-f]{16}\/report\?format=markdown&download=true$/);
+    const report = await page.request.get(href!);
+    expect(report.status()).toBe(200);
+    expect(await report.text()).toContain("# Investigation: ");
+    const json = await (await page.request.get(href!.replace("markdown", "json"))).json();
+    expect(json.schema_version).toBe("civicpulse.investigation-report/1");
+    expect(json.claims.every((c: { status: string }) => c.status === "valid")).toBe(true);
+    await expect(article.getByRole("link", { name: "Methodology" })).toHaveAttribute("href", "/about#methodology");
+    await article.getByRole("link", { name: "Open Geographic Intelligence" }).click();
+    await expect(page).toHaveURL(/\/geo$/);
+  });
+
+  test("trace shows claim validation, cutoff and snapshot", async ({ page }) => {
+    await page.goto("/analyst");
+    await ask(page, "How did Brooklyn compare with Queens for noise complaints last month?");
+    await expect(page.getByRole("article").first().getByText(/Answered|Verified summary/)).toBeVisible({ timeout: 45_000 });
+    const trace = page.getByRole("complementary", { name: "Investigation trace" });
+    await expect(trace.getByText(/Claims: \d+ of \d+ valid/)).toBeVisible();
+    await expect(trace.getByText(/Data cutoff .* NYC · snapshot/)).toBeVisible();
+    await trace.getByRole("button", { name: "Expand trace" }).click();
+    await expect(trace.getByText("Snapshot:").first()).toBeVisible();
+  });
+});

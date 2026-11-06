@@ -12,13 +12,22 @@ import json
 import time
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal
 
 import anyio
 from pydantic import BaseModel, Field
 
 from civicpulse_agent.budget import BudgetExceeded, UsageGovernor
+from civicpulse_agent.claims import (
+    FACTS_SHOWN_TO_MODEL,
+    Fact,
+    SemanticReport,
+    build_fact_index,
+    derived_numbers,
+    evaluate_answer,
+    extract_facts,
+)
 from civicpulse_agent.config import AgentSettings
 from civicpulse_agent.dates import resolve_periods
 from civicpulse_agent.evidence import Evidence
@@ -79,6 +88,7 @@ class InvestigationResult(BaseModel):
     periods: list[dict[str, str]] = Field(default_factory=list)
     freshness: dict[str, Any] = Field(default_factory=dict)
     charts: list[dict[str, Any]] = Field(default_factory=list)
+    claims: list[dict[str, Any]] = Field(default_factory=list, description="Validated claims rendered in the answer")
     provider: dict[str, Any] = Field(default_factory=dict)
     usage: dict[str, Any] = Field(default_factory=dict)
     mcp: dict[str, Any] = Field(default_factory=dict)
@@ -217,6 +227,34 @@ def build_charts(evidence: list[Evidence]) -> list[dict[str, Any]]:
 
 
 @dataclass
+class Verdict:
+    """Semantic claim validation plus the legacy number/policy checks on the rendered text."""
+
+    semantic: SemanticReport
+    legacy: GroundingReport
+
+    @property
+    def ok(self) -> bool:
+        return self.semantic.ok and self.legacy.ok
+
+    @property
+    def rendered(self) -> str:
+        return self.semantic.rendered
+
+    def feedback(self) -> str:
+        parts = [self.semantic.feedback()]
+        if self.semantic.ok:
+            parts.append(self.legacy.feedback())
+        return " ".join(p for p in parts if p)
+
+    def to_dict(self) -> dict[str, Any]:
+        d = self.legacy.to_dict()
+        d["ok"] = self.ok
+        d["semantic"] = self.semantic.to_dict()
+        return d
+
+
+@dataclass
 class _Run:
     trace: list[TraceStep]
     evidence: list[Evidence]
@@ -225,6 +263,7 @@ class _Run:
     cost: float = 0.0
     tool_calls: int = 0
     provider_calls: int = 0
+    claims: list[dict[str, Any]] = field(default_factory=list)
 
     def add(self, **kw: Any) -> None:
         self.trace.append(TraceStep(step=len(self.trace) + 1, **kw))
@@ -291,6 +330,7 @@ class Orchestrator:
                     },
                 },
                 charts=build_charts(run.evidence),
+                claims=run.claims,
                 duration_ms=round((time.perf_counter() - t0) * 1000, 1),
                 **kw,
             )
@@ -301,7 +341,11 @@ class Orchestrator:
             return result("refused", screening.message, validation={"screening": screening.category})
         run.add(kind="policy", name="input_screening", status="passed")
         if self.provider is None:
-            return result("error", "The AI analyst is disabled on this server (CIVICPULSE_LLM_PROVIDER=disabled).")
+            return result(
+                "error",
+                "The AI analyst is not available on this server: it is disabled, or a paid provider is not fully "
+                "configured and authorized (see /api/v1/ai/status).",
+            )
         self.governor.admit(client_id)  # raises BudgetExceeded
 
         prior = [
@@ -345,6 +389,8 @@ class Orchestrator:
         await session.list_tools()
         specs, schemas = tool_specs(session)
         dataset = await session.read_json_resource("civicpulse://dataset") or {}
+        # Per investigation (local, not on self): the orchestrator is shared by concurrent requests.
+        model_versions = {k: str(v) for k, v in (dataset.get("model_versions") or {}).items()}
         first = dt.date.fromisoformat(dataset["first_date"])
         last = dt.date.fromisoformat(dataset["last_complete_date"])
         today = self.today()
@@ -366,6 +412,7 @@ class Orchestrator:
             "periods": [p.to_dict() for p in periods],
             "delay_action_requested": delay_action,
             "max_tool_calls": s.ai_max_tool_calls,
+            "model_versions": model_versions,
         }
         mcp_info = {
             "protocol_version": session.protocol_version,
@@ -381,6 +428,7 @@ class Orchestrator:
             "build_id": dataset.get("build_id"),
             "live": False,
             "today": today.isoformat(),
+            "model_versions": model_versions,
         }
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -521,6 +569,9 @@ class Orchestrator:
                                 "evidence_id": eid,
                                 "tool": call.name,
                                 "status": ev.status,
+                                "snapshot_id": ev.data_build_id,
+                                "model_version": ev.model_version,
+                                "facts": [f.for_model() for f in extract_facts(ev)[:FACTS_SHOWN_TO_MODEL]],
                                 "result": _llm_view(out.structured),
                             },
                             default=str,
@@ -537,10 +588,12 @@ class Orchestrator:
 
         warnings += self._capability_warnings(run.evidence)
         evidence_map = {e.evidence_id: e for e in run.evidence}
+        facts, conflicts = build_fact_index(run.evidence)
+        check = self._make_checker(evidence_map, facts, conflicts, q, model_versions)
 
         # ---- grounding + bounded regeneration
         attempts: list[dict[str, Any]] = []
-        report = self._check(answer, evidence_map, q, delay_action)
+        report = check(answer)
         attempts.append(report.to_dict())
         run.add(
             kind="validation",
@@ -555,15 +608,16 @@ class Orchestrator:
                 {"role": "assistant", "content": answer},
                 {
                     "role": "user",
-                    "content": f"{FEEDBACK_PREFIX} {report.feedback()} Rewrite the answer using "
-                    "only numbers from the cited evidence.",
+                    "content": f"{FEEDBACK_PREFIX} {report.feedback()} Rewrite the answer as JSON; every "
+                    "number must be a claim that matches a fact exactly (metric, geography, category, period, "
+                    "unit, snapshot, model version).",
                 },
             ]
             resp = await self._complete(messages, [], run)
             if isinstance(resp, str):
                 break
             answer = resp.text
-            report = self._check(answer, evidence_map, q, delay_action)
+            report = check(answer)
             attempts.append(report.to_dict())
             run.add(
                 kind="validation",
@@ -576,15 +630,26 @@ class Orchestrator:
             "ok": report.ok,
             "attempts": attempts,
             "regenerations": regen,
-            "checks": "deterministic: citation existence, number support, policy phrases",
+            "checks": "deterministic: structured claims (metric, geography, category, period, comparison period, "
+            "unit, value, snapshot, model version, method, conflicts, derived arithmetic), prose dimension and "
+            "direction checks, no free numbers; then citation existence, number support and policy phrases on the "
+            "rendered text",
         }
         if not report.ok:
-            fb = self._fallback(run.evidence, ctx)
-            fb_report = self._check(fb, evidence_map, q, delay_action)
+            fb_report = check(self._fallback(run.evidence, ctx))
             validation["fallback"] = fb_report.to_dict()
             run.add(kind="validation", name="fallback_summary", status="passed" if fb_report.ok else "failed")
+            run.claims = [c.to_dict() for c in fb_report.semantic.checks if c.ok] if fb_report.ok else []
+            fb = (
+                fb_report.rendered
+                if fb_report.ok
+                else "The generated answer did not pass the automated evidence checks, and no verified summary "
+                "could be produced. The evidence is insufficient to answer this question."
+            )
             return result("fallback", fb, validation=validation, warnings=warnings, **common)
-        status: Status = "answered" if run.evidence or report.numbers_checked else "clarification"
+        run.claims = [c.to_dict() for c in report.semantic.checks if c.ok]
+        answer = report.rendered
+        status: Status = "answered" if run.evidence or report.legacy.numbers_checked else "clarification"
         if delay_action and not any(w in answer.lower() for w in ("can't", "cannot", "not validated", "must not")):
             answer = (
                 "I can't use the closure-delay model to prioritize requests, allocate services, rank "
@@ -643,13 +708,23 @@ class Orchestrator:
         )
         return resp
 
-    @staticmethod
-    def _check(answer: str, evidence: dict[str, Evidence], q: str, delay_action: bool) -> GroundingReport:
-        report = validate_answer(answer, evidence, q)
-        if not answer.strip():
-            report.ok = False
-            report.policy_violations.append("the answer is empty")
-        return report
+    def _make_checker(
+        self,
+        evidence: dict[str, Evidence],
+        facts: list[Fact],
+        conflicts: set[tuple[Any, ...]],
+        q: str,
+        model_versions: dict[str, str],
+    ) -> Callable[[str], Verdict]:
+        def check(answer: str) -> Verdict:
+            sem = evaluate_answer(answer, evidence, facts, conflicts, model_versions)
+            legacy = validate_answer(sem.rendered, evidence, q, derived_numbers({c.claim.id: c for c in sem.checks}))
+            if not sem.rendered.strip():
+                legacy.ok = False
+                legacy.policy_violations.append("the answer is empty")
+            return Verdict(sem, legacy)
+
+        return check
 
     @staticmethod
     def _capability_warnings(evidence: list[Evidence]) -> list[Warning]:
@@ -677,19 +752,27 @@ class Orchestrator:
 
     @staticmethod
     def _fallback(evidence: list[Evidence], ctx: dict[str, Any]) -> str:
+        """Deterministic structured answer quoting tool-computed text; validated like any other answer."""
         lines = [
             "The generated answer did not pass the automated evidence checks, so this is a summary of the "
             "verified tool results instead:"
         ]
+        claims: list[dict[str, Any]] = []
+
+        def quote(eid: str, fld: str, index: int | None = None) -> str:
+            cid = f"C{len(claims) + 1}"
+            claims.append({"id": cid, "type": "evidence_text", "evidence_id": eid, "field": fld, "index": index})
+            return "{" + cid + "}"
+
         for ev in evidence:
-            lines.append(f"- {ev.summary} [{ev.evidence_id}]")
-            for u in ev.uncertainty[:1]:
-                lines.append(f"  - Uncertainty: {u} [{ev.evidence_id}]")
+            lines.append(f"- {quote(ev.evidence_id, 'summary')}")
+            if ev.uncertainty:
+                lines.append(f"  - Uncertainty: {quote(ev.evidence_id, 'uncertainty', 0)}")
             if ev.tool == "detect_unusual_spikes":
                 lines.append(f"  - Flags are statistical and unverified, not confirmed incidents [{ev.evidence_id}].")
             if ev.tool == "forecast_request_volume" and not ev.uncertainty:
-                lines.append(f"  - Forecast intervals are nominal 90% [{ev.evidence_id}].")
+                lines.append(f"  - Forecast intervals are nominal, not guaranteed [{ev.evidence_id}].")
         if not evidence:
-            lines.append("- No tool returned evidence for this question.")
+            lines.append("- No tool returned evidence for this question, so the evidence is insufficient to answer it.")
         lines.append(f"- Data is a historical snapshot (cutoff {ctx.get('data_cutoff')}), not live monitoring.")
-        return "\n".join(lines)
+        return json.dumps({"answer": "\n".join(lines), "claims": claims})

@@ -482,7 +482,15 @@ def build_server(data_dir: Path, *, tool_timeout: float = DEFAULT_TOOL_TIMEOUT) 
     def dataset_resource() -> dict[str, Any]:
         opts = tools.svc.filter_options()
         build = tools.svc.build_info() or {}
+        try:
+            reg = tools.pred.registry()
+            model_versions = {name: str(m.get("version")) for name, m in (reg.get("models") or {}).items()}
+            model_run_id = reg.get("run_id")
+        except Exception:  # no saved model run: the dataset is still usable for analytics tools
+            model_versions, model_run_id = {}, None
         return {
+            "model_versions": model_versions,
+            "model_run_id": model_run_id,
             "dataset_id": cap.DATASET_ID,
             "dataset_name": cap.DATASET_NAME,
             "build_id": build.get("build_id"),

@@ -1,4 +1,4 @@
-# AI analyst threat model (Milestone 3)
+# AI analyst threat model (Milestones 3–4)
 
 Scope: the `/analyst` page, `POST /api/v1/ai/investigations`, `GET /api/v1/ai/status`, the
 orchestrator, the LLM provider connection and the `civicpulse-mcp` server. Assets: provider API key
@@ -34,12 +34,29 @@ and availability.
 | T14 | Sensitive data in logs or traces | Logs record question length, status, tool names, token counts; never the question text, answer or secrets. Trace arguments pass through `sanitize` (secret-like keys redacted, strings truncated). MCP audit log is JSON lines without results. | code review; `audit.py` |
 | T15 | Tool or provider failures hidden from the user | Every failure is a trace step with `error_kind`; the answer says which part could not be answered; status `error`/`fallback` are distinct. | eval `fail-*`, `test_tool_failure_is_reported_not_hidden` |
 
+## Milestone 4 controls
+
+| Threat | Control | Test |
+|---|---|---|
+| Unplanned paid usage | `CIVICPULSE_AI_PAID_ENABLED` kill switch (default off); paid provider also requires API key, access token, positive daily budget and both prices; otherwise the analyst is disabled (fail closed) and the route returns 503 before any provider call | `test_paid_ai_guard.py`, `test_api_ai.py` |
+| Provider switched by a stray key | provider chosen only by `CIVICPULSE_LLM_PROVIDER` | `test_key_presence_never_switches_provider` |
+| Resource exhaustion | concurrency gate (overall and per client, 429 + Retry-After), always released | `test_concurrency_limits` |
+| Plausible but wrong numbers (right value, wrong borough/period/unit/denominator/direction, stale model) | structured claim validation against facts; prose may not contain numbers | `test_semantic_claims.py`, eval `sem-*` |
+| Injection via conversation history | history screened like the question; failing items dropped | `test_injection_in_history_is_dropped` |
+| Report leaks secrets or tampered reports | allow-listed fields, secret/path redaction, SHA-256 checksums, offline re-validation, client-scoped expiring store, CSP on HTML | `test_report.py`, `test_api_ai.py` |
+| Shared mutable state across concurrent investigations | model versions now per investigation (race fixed) | `test_orchestrator.py` |
+| Smoke test incurring cost by accident | `scripts/llm_smoke_test.py` needs a flag AND an env confirmation AND no paid-AI blockers; ≤3 tool calls, 800 output tokens, no retries | `test_llm_smoke_script.py` |
+
 ## Residual risks
 
 - Regex screening is bypassable by paraphrase. The design does not rely on it: a successful injection
   can still only call read-only tools within budget, and every number is re-validated.
-- Grounding cannot detect a correct number attached to the wrong entity in prose.
-- In-process rate/cost state resets on restart and is per instance.
+- Prose checks are lexical; a paraphrase that avoids borough/category/date words is not interpreted
+  (numbers in prose are always rejected).
+- Behind the Next.js proxy, browsers share one client key unless trusted proxy hops are configured,
+  so per-client limits and report ownership are shared.
+- In-process rate/cost/concurrency state and the report store reset on restart and are per instance:
+  limits are **not** global across multiple instances.
 - The daily cost ceiling is only as accurate as the configured per-token prices; with prices at 0
   (default) it does not limit spend, but the per-client and daily request limits still apply.
 - No real LLM has been tested; provider-specific behaviour (refusals, tool-call formats) is unverified.

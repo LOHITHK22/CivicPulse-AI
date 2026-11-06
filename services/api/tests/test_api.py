@@ -134,6 +134,8 @@ def test_token_bucket_limits_and_refills():
 
 
 def test_data_unavailable_returns_503(tmp_path):
+    # Restore (not clear) the previous override: the module-scoped `client` fixture shares it.
+    previous = api_main.app.dependency_overrides.get(api_main.get_service)
     api_main.app.dependency_overrides[api_main.get_service] = lambda: AnalyticsService(tmp_path)
     try:
         with TestClient(api_main.app) as c:
@@ -141,7 +143,10 @@ def test_data_unavailable_returns_503(tmp_path):
             assert r.status_code == 503 and r.json()["code"] == "data_unavailable"
             assert c.get("/health/ready").status_code == 503
     finally:
-        api_main.app.dependency_overrides.clear()
+        if previous is None:
+            api_main.app.dependency_overrides.pop(api_main.get_service, None)
+        else:
+            api_main.app.dependency_overrides[api_main.get_service] = previous
 
 
 class _Req:
@@ -158,3 +163,20 @@ def test_client_key_uses_rightmost_trusted_hop():
     # Edge proxy appended the real peer (198.51.100.7) after a client-forged value.
     assert api_main.client_key(_Req("10.0.0.5", "6.6.6.6, 198.51.100.7"), 1) == "198.51.100.7"
     assert api_main.client_key(_Req("10.0.0.5"), 1) == "10.0.0.5"  # header missing -> peer
+
+
+def test_geo_boroughs_endpoint(client, fact):
+    r = client.get("/api/v1/geo/boroughs", params={"start": "2026-10-01", "end": "2026-10-31", "borough": "BRONX"})
+    assert r.status_code == 200
+    body = r.json()
+    oct_ = fact.filter(
+        (pl.col("created_date") >= pl.date(2026, 10, 1)) & (pl.col("created_date") <= pl.date(2026, 10, 31))
+    )
+    assert body["total_requests"] == oct_.height
+    assert {row["borough"] for row in body["rows"]} == {"BRONX", "BROOKLYN", "MANHATTAN", "QUEENS", "STATEN ISLAND"}
+    assert body["freshness"]["is_live"] is False and "geo_requests" in body["definitions"]
+    assert "latitude" not in r.text and "incident_address" not in r.text
+
+
+def test_geo_boroughs_rejects_bad_ranges(client):
+    assert client.get("/api/v1/geo/boroughs", params={"start": "2026-10-31", "end": "2026-10-01"}).status_code == 422

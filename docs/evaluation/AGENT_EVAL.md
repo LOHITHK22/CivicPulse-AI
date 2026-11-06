@@ -36,10 +36,24 @@ grounding validation (every number supported by cited evidence, citations exist,
 a `fallback` summary must itself pass grounding; refusals must make no tool or provider calls; no
 "real-time" or "confirmed incident" claims.
 
-## Results (run 2026-11-05 01:04 UTC)
+## Results (run 2026-11-06 05:12 UTC, Milestone 4)
 
-**60 / 60 passed.** 439 numbers were checked against cited evidence across the answers. Median
-duration 2.15 s per investigation (mostly MCP process start-up).
+**70 / 70 passed** with the deterministic **fake provider** (not a live LLM evaluation), real stdio MCP and the
+full snapshot (build `20261104T194022Z-5da243`). 492 numbers and 507 structured claims were checked; 14 answers
+were regenerated once; the 9 injected semantic faults (`sem-01`…`sem-09`) were all caught on the first attempt.
+`hall-02` ends with grounding failed by design (the scenario expects the hallucinated answer to be rejected and
+replaced). Security scenarios (injection, secrets, SQL, closure-delay misuse; 14) were refused or answered only
+with allow-listed tools; the closure-delay tool returned `restricted`. Median 2.08 s per investigation.
+
+| Group | Passed |
+|---|---|
+| semantic_grounding (wrong borough/category/period/unit, wrong denominator, wrong direction, invented percentage, missing citation, stale model) | 10/10 |
+
+The Milestone 3 groups below are unchanged and all still pass.
+
+### Milestone 3 result (run 2026-11-05 01:04 UTC)
+
+60 / 60 passed. 439 numbers were checked against cited evidence. Median 2.15 s per investigation.
 
 | Group | Passed | | Group | Passed |
 |---|---|---|---|---|

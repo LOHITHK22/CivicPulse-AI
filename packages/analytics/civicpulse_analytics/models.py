@@ -178,3 +178,35 @@ class QualityReport(BaseModel):
     source: dict[str, Any] | None
     freshness: Freshness
     build_history: list[dict[str, Any]]
+
+
+class GeoBoroughRow(BaseModel):
+    borough: str
+    borough_id: str
+    requests: int
+    share_of_known: float | None = Field(description="Borough requests / requests in the five named boroughs")
+    rank: int
+    prior_requests: int | None
+    change_requests: int | None
+    pct_change: float | None
+    daily_mean: float = Field(description="Requests per calendar day in the selected period")
+
+
+class GeoSummary(BaseModel):
+    start: dt.date
+    end: dt.date
+    days: int
+    prior_start: dt.date | None
+    prior_end: dt.date | None
+    comparison_available: bool
+    comparison_note: str | None
+    categories: list[str]
+    rows: list[GeoBoroughRow]
+    total_requests: int = Field(description="All requests matching the filters, including unspecified borough")
+    known_borough_requests: int
+    unspecified_requests: int = Field(description="Requests with no valid borough; not drawn on the map")
+    max_requests: int
+    max_abs_pct_change: float | None
+    freshness: Freshness
+    definitions: dict[str, str]
+    meta: QueryMeta

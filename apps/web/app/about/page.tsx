@@ -10,14 +10,15 @@ export default function Page() {
       <PageHeader title="About CivicPulse AI"
         subtitle="A personal engineering portfolio project: predictive city operations intelligence on public NYC 311 data." />
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="What it does today (Milestones 1–2)">
+        <Card title="What it does today">
           <ul className="list-disc space-y-1.5 pl-5 text-sm text-ink-2">
             <li>Extracts NYC 311 residential-noise and heat/hot-water requests from the Socrata API using keyset pagination, retries, checkpoints and incremental watermarks.</li>
             <li>Builds cleaned, typed Parquet tables with DuckDB, with data-quality rules and a full audit of each run.</li>
             <li>Serves reproducible metrics through a read-only FastAPI service, used by this dashboard.</li>
             <li>Prediction Lab: seven-day demand forecasts with prediction intervals, 7-day closure-delay risk and anomaly detection, each evaluated out-of-sample against simple baselines. Models are trained offline; the API only serves their stored outputs.</li>
+            <li>An MCP server with ten typed, read-only tools, and an AI Analyst that answers through them with deterministic evidence validation.</li>
+            <li>Geographic Intelligence: borough-level counts on official boundaries (no addresses or point locations).</li>
           </ul>
-          <p className="mt-3 text-sm text-ink-3">The MCP server, AI analyst and geographic views are planned for later milestones and are not implemented yet.</p>
         </Card>
         <Card title="Data source & attribution">
           <p className="text-sm text-ink-2">
@@ -38,9 +39,21 @@ export default function Page() {
         <Card title="Privacy">
           <p className="text-sm text-ink-2">
             Street addresses, cross streets, BBL and free-text resolution descriptions are never ingested. Coordinates are
-            used only for validation and future aggregated geography, and are never returned by the API.
+            used only for validation and are never returned by the API; maps show borough totals only.
           </p>
         </Card>
+        <section id="methodology" aria-label="Methodology" className="scroll-mt-6 lg:col-span-2">
+          <Card title="Methodology: how AI Analyst answers are verified">
+            <ol className="list-decimal space-y-1.5 pl-5 text-sm text-ink-2">
+              <li>The question is screened (length, prohibited requests, injection patterns). Only allow-listed, read-only MCP tools can be called; there is no SQL, file or command access.</li>
+              <li>Each tool result becomes evidence with a snapshot ID, data cutoff and, for model outputs, a model version.</li>
+              <li>The provider must return structured claims (metric, geography, category, period, unit, value, evidence ID). Each claim is checked against facts extracted from the cited evidence; derived values such as percentage changes are recomputed. Prose may not contain numbers of its own.</li>
+              <li>Answers that fail are regenerated once, then replaced by a verified summary of the evidence, or by a statement that the evidence is insufficient.</li>
+              <li>Reports contain only verified claims and checksummed evidence, and can be re-verified offline without the language model.</li>
+            </ol>
+            <p className="mt-3 text-sm text-ink-3">In this deployment the analyst runs with a deterministic demonstration provider, not a live language model, unless a live provider has been explicitly configured and authorized. 311 requests are reports, not incidents; raw counts are not rates; differences between areas do not by themselves show unequal service.</p>
+          </Card>
+        </section>
       </div>
     </>
   );

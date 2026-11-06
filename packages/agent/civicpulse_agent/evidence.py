@@ -67,6 +67,7 @@ class Evidence(BaseModel):
         res = dict(d.pop("result"))
         d["data"] = res.get("data", {})
         d["coverage"] = res.get("coverage")
+        d["model_name"] = (res.get("provenance") or {}).get("model_name")
         return d
 
 

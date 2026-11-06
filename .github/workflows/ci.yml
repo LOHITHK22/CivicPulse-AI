@@ -59,7 +59,9 @@ jobs:
       - working-directory: apps/web
         run: npx eslint .
       - working-directory: apps/web
-        run: npx next build
+        run: npm run test:unit
+      - working-directory: apps/web
+        run: npm run build
       - working-directory: apps/web
         run: npx playwright install --with-deps chromium
       - name: Playwright (starts API + web against the sample warehouse)

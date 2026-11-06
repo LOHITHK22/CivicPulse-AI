@@ -23,6 +23,7 @@ from civicpulse_analytics.models import (
     Breakdown,
     ClosureDistribution,
     FilterOptions,
+    GeoSummary,
     HourlyPattern,
     Kpis,
     QualityReport,
@@ -213,6 +214,11 @@ def create_app() -> FastAPI:
     @app.get("/api/v1/metrics/breakdown/{dimension}", response_model=Breakdown, tags=["metrics"])
     def breakdown(dimension: str, f: FiltersDep, svc: ServiceDep) -> Breakdown:
         return svc.breakdown(f, dimension)
+
+    @app.get("/api/v1/geo/boroughs", response_model=GeoSummary, tags=["geo"])
+    def geo_boroughs(f: FiltersDep, svc: ServiceDep) -> GeoSummary:
+        """Aggregated borough totals for the Geographic Intelligence map (borough filters are ignored)."""
+        return svc.geo_boroughs(f)
 
     @app.get("/api/v1/metrics/closure-distribution", response_model=ClosureDistribution, tags=["metrics"])
     def closure(f: FiltersDep, svc: ServiceDep) -> ClosureDistribution:

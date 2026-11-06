@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { BreakdownBars, ClosureHistogram, HourHeatmap, TimeSeriesChart } from "@/components/charts";
 import { FilterBar } from "@/components/FilterBar";
 import { KpiCard } from "@/components/KpiCard";
@@ -127,11 +128,13 @@ function Dashboard({ filters }: { filters: DashboardFilters }) {
             </Card>
           </div>
 
-          <Card id="planned" title="Historical vs predicted demand · anomaly overlays"
-            subtitle="Planned for Milestone 2. Nothing is shown here until forecasting and anomaly models are trained and evaluated.">
-            <p className="text-sm text-ink-3">
-              No forecasts or anomaly flags exist yet, and this dashboard does not simulate them.
-            </p>
+          <Card id="predictions" title="Forecasts, anomaly flags and geography"
+            subtitle="These views live on their own pages so their uncertainty and limitations are shown with them.">
+            <ul className="flex flex-wrap gap-4 text-sm">
+              <li><Link className="text-cyan hover:underline" href="/forecast">Forecast Lab: 7-day forecasts with intervals and baselines</Link></li>
+              <li><Link className="text-cyan hover:underline" href="/anomalies">Anomaly Center: unverified statistical flags</Link></li>
+              <li><Link className="text-cyan hover:underline" href="/geo">Geographic Intelligence: borough map and rankings</Link></li>
+            </ul>
           </Card>
         </>
       )}

@@ -28,6 +28,7 @@ _MONTH = (
     r"Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
 )
 _DATES = [
+    re.compile(r"\b(?:[a-z][a-z_]*(?:-[a-z_]+)*-)?\d{8}T\d{6}Z(?:-[0-9a-f]{4,8})?\b", re.I),  # build/model run ids
     re.compile(r"\b\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?)?\b"),
     re.compile(rf"\b{_MONTH}\.?\s+\d{{1,2}}(?:st|nd|rd|th)?(?:,?\s+\d{{4}})?\b", re.I),
     re.compile(rf"\b\d{{1,2}}(?:st|nd|rd|th)?\s+(?:of\s+)?{_MONTH}\b(?:\s+\d{{4}}\b)?", re.I),
@@ -133,10 +134,34 @@ def _supported(value: float, decimals: int, is_pct: bool, pool: set[float]) -> b
     return False
 
 
-def validate_answer(answer: str, evidence: dict[str, Evidence], question: str = "") -> GroundingReport:
+def free_numbers(text: str) -> list[str]:
+    """Numeric tokens that are not dates, clock times, years, short window lengths or the 311 service name."""
+    masked = _mask_dates(_CITATION.sub(lambda m: " " * len(m.group(0)), text))
+    out = []
+    for m in _NUMBER.finditer(masked):
+        int_part, frac, pct = m.group(1), m.group(2) or "", m.group(3) or ""
+        raw = int_part.replace(",", "")
+        if not frac and not pct and _YEAR.match(raw.lstrip("-")):
+            continue
+        value = float(raw + frac)
+        if not frac and not pct and 0 < value <= 31 and _WINDOW_UNIT.match(masked[m.end() :]):
+            continue
+        out.append((int_part + frac + pct.strip()).strip())
+    return out
+
+
+def validate_answer(
+    answer: str,
+    evidence: dict[str, Evidence],
+    question: str = "",
+    extra_numbers: dict[str, set[float]] | None = None,
+) -> GroundingReport:
     cited_all = sorted({c for grp in _CITATION.findall(answer) for c in _CITE_ID.findall(grp)})
     invalid = [c for c in cited_all if c not in evidence]
     pools = {eid: numbers_in(ev.result) | numbers_in(ev.arguments) for eid, ev in evidence.items()}
+    for eid, extra in (extra_numbers or {}).items():
+        if eid in pools:
+            pools[eid] = pools[eid] | extra
     q_numbers = numbers_in(question)
     checks: list[NumberCheck] = []
     violations: list[str] = []

@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { PlannedPage } from "@/components/PlannedPage";
+import { GeoExplorer } from "@/components/pages/GeoExplorer";
+import { Loading, PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Geographic Intelligence" };
 
 export default function Page() {
   return (
-    <PlannedPage title="Geographic Intelligence" milestone={4}
-      purpose="Aggregated geographic view of complaint activity using borough and community-district boundaries."
-      scope={[
-        "MapLibre map with borough / community-district boundaries (aggregated, never individual addresses)",
-        "Category and time filters shared with the dashboard",
-        "Trend comparisons and anomaly indicators per area",
-        "Population-normalized rates only with a documented, period-matched denominator",
-      ]} />
+    <>
+      <PageHeader title="Geographic Intelligence"
+        subtitle="Borough-level 311 request activity from the warehouse: volume, period-over-period change, rankings and trends. Aggregated counts only; boroughs are the finest geography matched reliably in this dataset." />
+      <Suspense fallback={<Loading label="Loading Geographic Intelligence" className="h-96" />}>
+        <GeoExplorer />
+      </Suspense>
+    </>
   );
 }

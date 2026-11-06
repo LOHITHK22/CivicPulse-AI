@@ -37,6 +37,15 @@ FAULTS = {
     "provider_error",
     "slow",
     "causal_claim",
+    "invented_percentage",
+    "missing_citation",
+    "wrong_borough",
+    "wrong_category",
+    "wrong_period",
+    "wrong_unit",
+    "wrong_denominator",
+    "wrong_direction",
+    "stale_model",
 }
 BOROUGHS = ["BRONX", "BROOKLYN", "MANHATTAN", "QUEENS", "STATEN ISLAND"]
 
@@ -275,18 +284,20 @@ class FakeProvider:
 
     # ------------------------------------------------------------------ composition
     def _compose(self, question: str, ctx: dict[str, Any], tool_msgs: list[dict[str, Any]], retry: int) -> str:
+        """Structured answer: prose with {C#} placeholders plus claims copied from the tool's fact records."""
         evidence = [t for t in tool_msgs if "evidence_id" in t]
         failures = [t for t in tool_msgs if "error" in t]
         if not evidence and not failures:
             return (
                 "Could you clarify what you would like to know? I can analyse NYC 311 residential noise and heat/hot-"
                 "water requests: trends over a period, borough comparisons, category breakdowns, the precomputed "
-                "7-day forecast and its evaluation, statistical anomaly flags, and data freshness and quality. "
+                "seven-day forecast and its evaluation, statistical anomaly flags, and data freshness and quality. "
                 "Please name a period, borough or complaint category."
             )
+        book = _ClaimBook()
         lines: list[str] = []
         for ev in evidence:
-            lines += self._describe(ev)
+            lines += self._describe(ev, book)
         for f in failures:
             lines.append(
                 f"- The `{f.get('tool', 'unknown')}` call did not succeed ({f.get('error_kind', 'error')}), so its "
@@ -321,92 +332,264 @@ class FakeProvider:
         if cut and not notes:
             lines.append(f"- Data is a historical snapshot (cutoff {cut}), not live monitoring.")
         e1 = evidence[0]["evidence_id"] if evidence else "E1"
-        if self.fault == "always_hallucinate" or (self.fault == "hallucinate_number" and retry == 0):
-            lines.insert(0, f"- Requests rose by 987,654 compared with the prior period [{e1}].")
-        if self.fault == "bad_citation" and retry == 0:
-            lines.insert(0, "- Summary of findings [E9].")
-        if self.fault == "causal_claim" and retry == 0:
-            lines.insert(0, f"- The October increase was caused by the cold weather [{e1}].")
-        return "\n".join(lines)
+        if retry == 0 or self.fault == "always_hallucinate":
+            self._inject_fault(lines, book, e1)
+        return json.dumps({"answer": "\n".join(lines), "claims": book.claims})
 
-    def _describe(self, ev: dict[str, Any]) -> list[str]:
+    def _inject_fault(self, lines: list[str], book: _ClaimBook, e1: str) -> None:
+        """Simulated model misbehaviour (tests/evals only). Applied to the first attempt, or every attempt."""
+        f = self.fault
+        meas = [c for c in book.claims if c["type"] == "measurement"]
+        if f in ("always_hallucinate", "hallucinate_number"):
+            lines.insert(0, f"- Requests rose by 987,654 compared with the prior period [{e1}].")
+        elif f == "invented_percentage":
+            lines.insert(0, f"- Requests rose 23.4% year over year [{e1}].")
+        elif f == "bad_citation":
+            lines.insert(0, "- Summary of findings [E9].")
+        elif f == "causal_claim":
+            lines.insert(0, f"- The October increase was caused by the cold weather [{e1}].")
+        elif f == "missing_citation" and meas:
+            meas[0]["evidence_id"] = None
+        elif f == "wrong_borough" and meas:
+            c = meas[0]
+            c["geography_id"] = "queens" if c.get("geography_id") != "queens" else "bronx"
+        elif f == "wrong_category" and meas:
+            c = meas[0]
+            c["category_id"] = "heat_hot_water" if c.get("category_id") != "heat_hot_water" else "noise_residential"
+        elif f == "wrong_period" and meas:
+            c = meas[0]
+            if c.get("period_start"):
+                c["period_start"] = _shift_year(c["period_start"])
+                c["period_end"] = _shift_year(c["period_end"])
+        elif f == "wrong_unit" and meas:
+            meas[0]["unit"] = "hours"
+        elif f == "wrong_denominator":
+            counts = [c for c in meas if c.get("metric_id") == "request_count" and c.get("geography_id") in _BORO_IDS]
+            if len(counts) >= 2:
+                a, b = counts[0], counts[1]
+                cid = book.add(
+                    {
+                        "type": "derived",
+                        "operation": "share",
+                        "operands": [a["id"], b["id"]],
+                        "unit": "percent",
+                        "value": round(100 * float(a["value"]) / float(b["value"]), 1),
+                    }
+                )
+                lines.insert(0, f"- {_BORO_LABEL[a['geography_id']]} accounted for {cid} of the selected boroughs.")
+        elif f == "wrong_direction":
+            counts = [c for c in meas if c.get("metric_id") == "request_count" and c.get("geography_id") in _BORO_IDS]
+            if len(counts) >= 2:
+                a, b = counts[0], counts[1]
+                rel = "less" if float(a["value"]) > float(b["value"]) else "greater"
+                cid = book.add({"type": "comparison", "left": a["id"], "right": b["id"], "relation": rel})
+                lines.insert(0, f"- Comparison: {cid}.")
+        elif f == "stale_model" and meas:
+            for c in meas:
+                if c.get("model_version"):
+                    c["model_version"] = "forecast-20250101T000000Z-000000"
+                    break
+
+    def _describe(self, ev: dict[str, Any], book: _ClaimBook) -> list[str]:
         e = ev["evidence_id"]
         r = ev["result"]
+        facts: list[dict[str, Any]] = ev.get("facts") or []
         tool, data, status = r["tool"], r.get("data") or {}, r.get("status")
-        out = [f"- {r['summary']} [{e}]"]
+        filters = data.get("filters") or {}
+        out = [f"- {book.quote(e, 'summary')}"]
         if status == "no_data":
             return out
+
+        def fact(metric: str, **dims: Any) -> dict[str, Any] | None:
+            for f in facts:
+                if f["metric_id"] == metric and all(f.get(k) == v for k, v in dims.items()):
+                    return f
+            return None
+
+        def claim(f: dict[str, Any] | None) -> str:
+            return book.measure(f) if f else ""
+
+        cat_lbl = _CAT_LABEL.get(str(filters.get("category") or "all"), "all loaded categories")
+        span = f"{filters.get('start_date')} to {filters.get('end_date')}"
         if tool == "get_service_request_trends":
+            geo_lbl = _BORO_LABEL.get(_geo(filters.get("borough")), "all boroughs")
             top = data.get("top_periods") or []
-            if top:
+            refs = [claim(fact("request_count", period_start=p["period"])) for p in top[:3]]
+            refs = [x for x in refs if x]
+            if refs:
+                out.append(f"- Largest periods for {geo_lbl}, {cat_lbl}: " + "; ".join(refs) + ".")
+            pct = fact("pct_change_vs_prior_period")
+            if pct:
                 out.append(
-                    "- Largest periods: "
-                    + "; ".join(f"{p['period']}: {_fmt(p['value'])}" for p in top[:3])
-                    + f" [{e}]."
+                    f"- Change for {geo_lbl}, {cat_lbl} versus the prior period of equal length "
+                    f"({pct.get('comparison_period_start')} to {pct.get('comparison_period_end')}): {claim(pct)}."
                 )
-            prior = data.get("prior_period") or {}
-            if prior.get("pct_change") is not None:
-                out.append(f"- Change vs the prior period of equal length: {_pct(prior['pct_change'])} [{e}].")
         elif tool == "compare_boroughs":
             for row in data.get("rows", []):
-                out.append(
-                    f"- {row['borough']}: {_fmt(row['requests'])} requests "
-                    f"({_pct(row['share_of_selected'])} of the selected boroughs) [{e}]."
-                )
+                g = _geo(row["borough"])
+                n, sh = claim(fact("request_count", geography_id=g)), claim(fact("share_of_selected", geography_id=g))
+                if n:
+                    out.append(
+                        f"- {row['borough']}, {cat_lbl}, {span}: {n}"
+                        + (f"; {sh} of the selected boroughs." if sh else ".")
+                    )
             pairs = data.get("pairwise") or []
             if len(pairs) == 1 and pairs[0].get("pct_more") is not None:
                 p = pairs[0]
+                pid = f"{_geo(p['higher'])}-vs-{_geo(p['lower'])}"
+                d, pm = claim(fact("difference_requests", geography_id=pid)), claim(fact("pct_more", geography_id=pid))
                 out.append(
-                    f"- {p['higher']} had {_fmt(p['difference_requests'])} more requests than {p['lower']} "
-                    f"({_pct(p['pct_more'])} more) [{e}]. Counts are raw, not per capita."
+                    f"- {p['higher']} had more requests than {p['lower']}, a difference of {d} ({pm} more). "
+                    "Counts are raw, not per capita."
                 )
         elif tool == "get_category_breakdown":
+            b_lbl = _BORO_LABEL.get(_geo(filters.get("borough")), "all boroughs")
             for row in (data.get("rows") or [])[:5]:
-                out.append(f"- {row['label']}: {_fmt(row['requests'])} ({_pct(row['share'])}) [{e}].")
+                seg = row["key"] if filters.get("level") == "category" else None
+                cands = [
+                    f
+                    for f in facts
+                    if f["metric_id"] == "request_count" and f.get("category_id") != filters.get("category")
+                ]
+                f_n = next((f for f in cands if f.get("category_id") == seg), None) if seg else None
+                if f_n is None:
+                    f_n = next(
+                        (
+                            f
+                            for f in cands
+                            if f["value"] == row["requests"] and f.get("category_id", "").endswith(_slug(row["key"]))
+                        ),
+                        None,
+                    )
+                if f_n is None:
+                    continue
+                f_s = fact("share_of_total", category_id=f_n["category_id"])
+                out.append(
+                    f"- {row['label']} ({b_lbl}, {span}): {claim(f_n)}"
+                    + (f", {claim(f_s)} of the total." if f_s else ".")
+                )
         elif tool == "forecast_request_volume":
+            series = data.get("series") or []
             for p in (data.get("all_boroughs_point_total") or [])[:7]:
-                out.append(
-                    f"- {p['target_date']}: {_fmt(p['predicted_all_boroughs'])} predicted (sum of borough "
-                    f"point forecasts) [{e}]."
-                )
-            for s in (data.get("series") or [])[:1]:
-                for f in s.get("forecast", [])[:7]:
-                    if f.get("lower") is not None and len(data.get("series", [])) == 1:
+                f = fact("forecast_predicted", geography_id="all", period_start=p["target_date"])
+                if f:
+                    out.append(
+                        f"- all boroughs, {p['target_date']}: {claim(f)} predicted (sum of borough point forecasts)."
+                    )
+            level = fact("interval_nominal_level")
+            if len(series) == 1:
+                g = _geo(series[0].get("borough"))
+                for fc in series[0].get("forecast", [])[:7]:
+                    day = fc["target_date"]
+                    pr = fact("forecast_predicted", geography_id=g, period_start=day)
+                    lo = fact("forecast_lower", geography_id=g, period_start=day)
+                    hi = fact("forecast_upper", geography_id=g, period_start=day)
+                    if pr and lo and hi:
+                        lvl = claim(level) if level else "nominal"
                         out.append(
-                            f"- {f['target_date']}: {_fmt(f['predicted'])} (90% interval {_fmt(f['lower'])}"
-                            f" to {_fmt(f['upper'])}) [{e}]."
+                            f"- {series[0]['borough']}, {day}: {claim(pr)} predicted "
+                            f"({lvl} interval {claim(lo)} to {claim(hi)})."
                         )
-            out.append(f"- Uncertainty: {' '.join(r.get('uncertainty', [])[:2])} [{e}]")
-            for lim in r.get("limitations", [])[:2]:
-                out.append(f"- Evaluation: {lim} [{e}]")
+            unc = " ".join(book.quote(e, "uncertainty", i) for i in range(min(2, len(r.get("uncertainty", [])))))
+            out.append(f"- Uncertainty: {unc}")
+            for i in range(min(2, len(r.get("limitations", [])))):
+                out.append(f"- Evaluation: {book.quote(e, 'limitations', i)}")
         elif tool == "detect_unusual_spikes":
-            for f in (data.get("flags") or [])[:5]:
-                out.append(
-                    f"- {f['date']} {f['geography']} {f['category']}: {_fmt(f['actual'])} actual vs "
-                    f"{_fmt(f['expected'])} expected (score {_fmt(f['score'])}) [{e}]."
-                )
+            for fl in (data.get("flags") or [])[:5]:
+                g, c, day = _geo(fl["geography"]), fl["category"], fl["date"]
+                a = fact("anomaly_actual", geography_id=g, category_id=c, period_start=day)
+                x = fact("anomaly_expected", geography_id=g, category_id=c, period_start=day)
+                sc = fact("anomaly_score", geography_id=g, category_id=c, period_start=day)
+                if a and x and sc:
+                    out.append(
+                        f"- {day}, {_BORO_LABEL.get(g, 'all boroughs')}, {_CAT_LABEL.get(c, c)}: {claim(a)} actual vs "
+                        f"{claim(x)} expected (robust score {claim(sc)})."
+                    )
+            extra = book.quote(e, "uncertainty", 1) if len(r.get("uncertainty", [])) > 1 else ""
             out.append(
-                f"- These are statistical flags, not confirmed incidents, and they carry no cause. "
-                f"{' '.join(r.get('uncertainty', [])[1:2])} [{e}]"
+                f"- These are statistical flags, not confirmed incidents, and they carry no cause. {extra}".rstrip()
             )
         elif tool == "predict_closure_delay":
-            out.append(f"- Decision: {data.get('decision', '')} [{e}]")
-            for lim in r.get("limitations", [])[:3]:
-                out.append(f"- {lim} [{e}]")
-            out.append(f"- Prohibited uses: {'; '.join(data.get('prohibited_uses', [])[:5])}.")
-        elif tool == "get_model_evaluation":
-            for lim in r.get("limitations", [])[:2]:
-                out.append(f"- {lim} [{e}]")
-            for u in r.get("uncertainty", [])[:1]:
-                out.append(f"- {u} [{e}]")
-        elif tool == "get_dataset_quality":
-            for lim in r.get("limitations", [])[:3]:
-                out.append(f"- {lim} [{e}]")
-            for w in (data.get("warnings") or [])[:3]:
-                out.append(f"- {w} [{e}]")
+            out.append(f"- Decision: {book.quote(e, 'decision')}")
+            for i in range(min(3, len(r.get("limitations", [])))):
+                out.append(f"- {book.quote(e, 'limitations', i)}")
+            out.append(f"- Prohibited uses: {book.quote(e, 'prohibited_uses')}")
+        elif tool in ("get_model_evaluation", "get_dataset_quality"):
+            for i in range(min(2 if tool == "get_model_evaluation" else 3, len(r.get("limitations", [])))):
+                out.append(f"- {book.quote(e, 'limitations', i)}")
+            if tool == "get_model_evaluation" and r.get("uncertainty"):
+                out.append(f"- {book.quote(e, 'uncertainty', 0)}")
+            for i in range(min(3, len(data.get("warnings") or []))):
+                out.append(f"- {book.quote(e, 'warnings', i)}")
         else:
-            for m in r.get("key_measurements", [])[:6]:
-                out.append(f"- {m['name'].replace('_', ' ')}: {_fmt(m['value'])} [{e}].")
-            for lim in r.get("limitations", [])[:2]:
-                out.append(f"- {lim} [{e}]")
+            generic = [f for f in facts if f["fact_id"].startswith(e + ".")][:6]
+            for f in generic:
+                out.append(f"- {f['metric_id'].replace('_', ' ')}: {claim(f)}.")
+            for i in range(min(2, len(r.get("limitations", [])))):
+                out.append(f"- {book.quote(e, 'limitations', i)}")
         return out
+
+
+_BORO_IDS = {"bronx", "brooklyn", "manhattan", "queens", "staten_island"}
+_BORO_LABEL = {
+    "bronx": "BRONX",
+    "brooklyn": "BROOKLYN",
+    "manhattan": "MANHATTAN",
+    "queens": "QUEENS",
+    "staten_island": "STATEN ISLAND",
+    "all": "all boroughs",
+}
+_CAT_LABEL = {
+    "noise_residential": "residential noise",
+    "heat_hot_water": "heat/hot water",
+    "all": "all loaded categories",
+}
+
+
+def _geo(v: Any) -> str:
+    s = str(v or "ALL").upper().replace("_", " ")
+    return {"ALL": "all", "CITYWIDE": "all", "ALL SERIES": "all"}.get(s, s.lower().replace(" ", "_"))
+
+
+def _slug(text: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", str(text).lower()).strip("_")[:60]
+
+
+def _shift_year(day: str) -> str:
+    d = dt.date.fromisoformat(day)
+    try:
+        return d.replace(year=d.year - 1).isoformat()
+    except ValueError:
+        return (d - dt.timedelta(days=365)).isoformat()
+
+
+class _ClaimBook:
+    """Collects claims; measurement claims restate every dimension of the fact they come from."""
+
+    def __init__(self) -> None:
+        self.claims: list[dict[str, Any]] = []
+
+    def add(self, claim: dict[str, Any]) -> str:
+        cid = f"C{len(self.claims) + 1}"
+        self.claims.append({"id": cid, **claim})
+        return "{" + cid + "}"
+
+    def measure(self, f: dict[str, Any]) -> str:
+        keys = (
+            "evidence_id",
+            "metric_id",
+            "geography_id",
+            "category_id",
+            "period_start",
+            "period_end",
+            "comparison_period_start",
+            "comparison_period_end",
+            "value",
+            "unit",
+            "snapshot_id",
+            "model_version",
+        )
+        return self.add({"type": "measurement", **{k: f.get(k) for k in keys}})
+
+    def quote(self, evidence_id: str, fld: str, index: int | None = None) -> str:
+        return self.add({"type": "evidence_text", "evidence_id": evidence_id, "field": fld, "index": index})

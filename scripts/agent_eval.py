@@ -56,6 +56,11 @@ def check(sc: dict[str, Any], r: InvestigationResult) -> list[str]:
         fails.append(f"tool calls {r.usage['tool_calls']} > {sc['expect_max_tool_calls']}")
     if "expect_regenerations" in sc and r.validation.get("regenerations") != sc["expect_regenerations"]:
         fails.append(f"regenerations {r.validation.get('regenerations')} != {sc['expect_regenerations']}")
+    if sc.get("expect_first_attempt_claim_status"):
+        first = (r.validation.get("attempts") or [{}])[0].get("semantic", {})
+        seen = {c["status"] for c in first.get("claims", [])}
+        if not seen & set(sc["expect_first_attempt_claim_status"]):
+            fails.append(f"first attempt claim statuses {sorted(seen)} lack {sc['expect_first_attempt_claim_status']}")
     if sc.get("expect_warning") and not any(w.level == sc["expect_warning"] for w in r.warnings):
         fails.append(f"no {sc['expect_warning']} warning")
     # Universal invariants
@@ -112,6 +117,11 @@ async def run_one(sc: dict[str, Any], base: AgentSettings, provider_name: str, t
         "grounding_ok": r.validation.get("ok"),
         "regenerations": r.validation.get("regenerations"),
         "numbers_checked": (r.validation.get("attempts") or [{}])[-1].get("numbers_checked"),
+        "claims_valid": len(r.claims),
+        "first_attempt_claim_failures": sorted(
+            {c["status"] for c in ((r.validation.get("attempts") or [{}])[0].get("semantic") or {}).get("claims", [])}
+            - {"valid"}
+        ),
         "warnings": [w.level for w in r.warnings],
         "duration_s": round(time.perf_counter() - t0, 2),
         "answer_chars": len(r.answer),
