@@ -210,3 +210,51 @@ def test_last_complete_date_excludes_truncated_final_day(svc, fact):
     full_day = last_ts.hour >= 23
     expected = opts.max_date if full_day else opts.max_date - dt.timedelta(days=1)
     assert opts.last_complete_date == expected
+
+
+GEO_CASES = [
+    Filters(start=dt.date(2026, 10, 1), end=dt.date(2026, 10, 31)),
+    Filters(start=dt.date(2026, 1, 1), end=dt.date(2026, 3, 31), categories=["heat_hot_water"]),
+    Filters(start=dt.date(2025, 6, 1), end=dt.date(2025, 6, 30), categories=["noise_residential"], boroughs=["BRONX"]),
+]
+
+
+@pytest.mark.parametrize("f", GEO_CASES, ids=lambda f: f.model_dump_json(exclude_defaults=True))
+def test_geo_boroughs_match_independent_computation(svc, fact, f):
+    g = svc.geo_boroughs(f)
+    unfiltered = f.model_copy(update={"boroughs": []})  # the map always shows all five boroughs
+    sub = apply(fact, unfiltered)
+    counts = dict(sub.group_by("borough").len().iter_rows())
+    for row in g.rows:
+        assert row.requests == counts.get(row.borough, 0), row
+    assert g.total_requests == sub.height
+    assert g.unspecified_requests == sub.height - g.known_borough_requests
+    assert [r.rank for r in g.rows] == [1, 2, 3, 4, 5]
+    assert all(a.requests >= b.requests for a, b in zip(g.rows, g.rows[1:], strict=False))
+    assert sum(r.share_of_known or 0 for r in g.rows) == pytest.approx(1.0, abs=0.001)
+    days = (f.end - f.start).days + 1
+    prior = apply(
+        fact,
+        unfiltered.model_copy(
+            update={"start": f.start - dt.timedelta(days=days), "end": f.start - dt.timedelta(days=1)}
+        ),
+    )
+    prior_counts = dict(prior.group_by("borough").len().iter_rows())
+    for row in g.rows:
+        assert row.prior_requests == prior_counts.get(row.borough, 0)
+        if row.prior_requests:
+            assert row.pct_change == pytest.approx((row.requests - row.prior_requests) / row.prior_requests, abs=1e-4)
+
+
+def test_geo_boroughs_agree_with_kpis_per_borough(svc):
+    f = Filters(start=dt.date(2026, 9, 1), end=dt.date(2026, 10, 31), categories=["noise_residential"])
+    g = svc.geo_boroughs(f)
+    for row in g.rows:
+        k = svc.kpis(f.model_copy(update={"boroughs": [row.borough]}))
+        assert k.total_requests == row.requests
+        assert k.comparison.prior_total == row.prior_requests
+
+
+def test_geo_comparison_unavailable_before_data(svc):
+    g = svc.geo_boroughs(Filters(start=dt.date(2023, 1, 1), end=dt.date(2023, 1, 31)))
+    assert not g.comparison_available and g.comparison_note and all(r.pct_change is None for r in g.rows)

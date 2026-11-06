@@ -185,3 +185,35 @@ export interface QualityReport {
   freshness: Freshness;
   build_history: { build_id: string; built_at_utc: string; pass: number; warn: number; fail: number }[];
 }
+
+export interface GeoBoroughRow {
+  borough: string;
+  borough_id: string;
+  requests: number;
+  share_of_known: number | null;
+  rank: number;
+  prior_requests: number | null;
+  change_requests: number | null;
+  pct_change: number | null;
+  daily_mean: number;
+}
+
+export interface GeoSummary {
+  start: string;
+  end: string;
+  days: number;
+  prior_start: string | null;
+  prior_end: string | null;
+  comparison_available: boolean;
+  comparison_note: string | null;
+  categories: string[];
+  rows: GeoBoroughRow[];
+  total_requests: number;
+  known_borough_requests: number;
+  unspecified_requests: number;
+  max_requests: number;
+  max_abs_pct_change: number | null;
+  freshness: Freshness;
+  definitions: Record<string, string>;
+  meta: QueryMeta;
+}

@@ -28,6 +28,8 @@ from civicpulse_analytics.models import (
     ClosureDistribution,
     FilterOptions,
     Freshness,
+    GeoBoroughRow,
+    GeoSummary,
     HeatCell,
     HourlyPattern,
     Kpis,
@@ -97,6 +99,18 @@ DEFINITIONS = {
     "before snapshot) and without closure-quality flags: share with no "
     "recorded closure within N days.",
     "time_basis": "created_date/closed_date are NYC local wall-clock times as published by the source.",
+    "geo_requests": "Requests per borough as recorded in the 311 data (borough field), summed from the daily "
+    "aggregate. Raw counts of reports, not incidents and not per-capita rates.",
+    "geo_share_of_known": "Borough requests divided by requests in the five named boroughs (unspecified excluded).",
+    "geo_pct_change": "(current - prior) / prior, where prior is the preceding period of equal length with the same "
+    "category filter. Null when the prior period is not fully inside the loaded data.",
+}
+GEO_IDS = {
+    "BRONX": "bronx",
+    "BROOKLYN": "brooklyn",
+    "MANHATTAN": "manhattan",
+    "QUEENS": "queens",
+    "STATEN ISLAND": "staten_island",
 }
 
 
@@ -343,6 +357,88 @@ class AnalyticsService:
             pct_change=round(pct, 4) if pct is not None else None,
             note=note,
         )
+
+    # -- geography ----------------------------------------------------------------------
+    def geo_boroughs(self, f: Filters) -> GeoSummary:
+        """Borough totals for the map: current period, preceding period of equal length, shares and ranks.
+
+        Borough filters are ignored (the map always shows all five boroughs). Counts come from the same daily
+        aggregate as the trend charts, so map totals and trend totals agree by construction.
+        """
+        opts = self.filter_options()
+        if opts.min_date is None or opts.last_complete_date is None:
+            raise DataUnavailableError("the warehouse is empty")
+        start = f.start or (opts.last_complete_date - dt.timedelta(days=27))
+        end = f.end or opts.last_complete_date
+        base = f.model_copy(update={"boroughs": [], "start": start, "end": end})
+
+        def compute() -> GeoSummary:
+            t0 = time.perf_counter()
+
+            def totals(ff: Filters) -> dict[str, int]:
+                where, params = ff.where()
+                rows = self._query(
+                    f"SELECT borough, sum(request_count)::BIGINT FROM agg_daily_requests WHERE {where} GROUP BY 1",
+                    params,
+                )
+                return {str(r[0]): int(r[1]) for r in rows}
+
+            cur = totals(base)
+            days = (end - start).days + 1
+            prior_end = start - dt.timedelta(days=1)
+            prior_start = prior_end - dt.timedelta(days=days - 1)
+            available = opts.min_date is not None and prior_start >= opts.min_date
+            prior = totals(base.model_copy(update={"start": prior_start, "end": prior_end})) if available else {}
+            note = (
+                None
+                if available
+                else (
+                    f"The preceding period ({prior_start}..{prior_end}) starts before the loaded data "
+                    f"({opts.min_date}); no comparison is shown."
+                )
+            )
+            known = sum(cur.get(b, 0) for b in GEO_IDS)
+            ranked = sorted(GEO_IDS, key=lambda b: (-cur.get(b, 0), b))
+            rows = []
+            for i, b in enumerate(ranked, 1):
+                n = cur.get(b, 0)
+                p = prior.get(b, 0) if available else None
+                pct = round((n - p) / p, 4) if p else None
+                rows.append(
+                    GeoBoroughRow(
+                        borough=b,
+                        borough_id=GEO_IDS[b],
+                        requests=n,
+                        share_of_known=round(n / known, 4) if known else None,
+                        rank=i,
+                        prior_requests=p,
+                        change_requests=(n - p) if p is not None else None,
+                        pct_change=pct,
+                        daily_mean=round(n / days, 2),
+                    )
+                )
+            pcts = [abs(r.pct_change) for r in rows if r.pct_change is not None]
+            return GeoSummary(
+                start=start,
+                end=end,
+                days=days,
+                prior_start=prior_start if available else None,
+                prior_end=prior_end if available else None,
+                comparison_available=available,
+                comparison_note=note,
+                categories=base.categories,
+                rows=rows,
+                total_requests=sum(cur.values()),
+                known_borough_requests=known,
+                unspecified_requests=sum(v for k, v in cur.items() if k not in GEO_IDS),
+                max_requests=max((r.requests for r in rows), default=0),
+                max_abs_pct_change=max(pcts) if pcts else None,
+                freshness=self.freshness(),
+                definitions={k: v for k, v in DEFINITIONS.items() if k.startswith("geo_") or k == "time_basis"},
+                meta=self._meta(t0, len(rows)),
+            )
+
+        return self._cached(f"geo:{base.cache_key()}", compute)
 
     # -- series & breakdowns ------------------------------------------------------------
     def volume_series(self, f: Filters, grain: str = "day", split_by: str = "category_key") -> Series:

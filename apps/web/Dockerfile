@@ -9,7 +9,7 @@ RUN npm ci
 COPY . .
 ARG API_BASE_URL=http://api:8000
 ENV API_BASE_URL=${API_BASE_URL} NEXT_TELEMETRY_DISABLED=1
-RUN npx next build && npm prune --omit=dev
+RUN npm run build && npm prune --omit=dev
 
 FROM node:22-slim
 WORKDIR /app
