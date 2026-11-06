@@ -488,6 +488,8 @@ class ClaimCheck:
             "operation": c.operation,
             "operands": c.operands or [x for x in (c.left, c.right) if x],
             "relation": c.relation,
+            # The claim exactly as proposed, so a report can re-validate it offline without the LLM.
+            "input": c.model_dump(exclude_none=True, exclude_defaults=True) | {"id": c.id, "type": c.type},
         }
 
 

@@ -37,6 +37,9 @@ class AgentSettings(BaseSettings):
     # Optional shared secret for the investigation endpoint. Unset = anonymous access (local demo only);
     # a public deployment must set it and inject it server-side (never in the browser bundle).
     ai_access_token: SecretStr | None = None
+    # Investigation reports: results kept in process memory (bounded, expiring) so a report can be downloaded.
+    ai_report_store_size: int = Field(default=100, ge=1, le=1_000)
+    ai_report_ttl_seconds: int = Field(default=3_600, ge=60, le=86_400)
 
     # MCP connection
     data_dir: Path | None = None

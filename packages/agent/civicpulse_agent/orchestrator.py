@@ -270,8 +270,6 @@ class _Run:
 
 
 class Orchestrator:
-    _model_versions: dict[str, str] = {}  # noqa: RUF012 - replaced per investigation
-
     def __init__(
         self,
         settings: AgentSettings,
@@ -387,7 +385,8 @@ class Orchestrator:
         await session.list_tools()
         specs, schemas = tool_specs(session)
         dataset = await session.read_json_resource("civicpulse://dataset") or {}
-        self._model_versions = {k: str(v) for k, v in (dataset.get("model_versions") or {}).items()}
+        # Per investigation (local, not on self): the orchestrator is shared by concurrent requests.
+        model_versions = {k: str(v) for k, v in (dataset.get("model_versions") or {}).items()}
         first = dt.date.fromisoformat(dataset["first_date"])
         last = dt.date.fromisoformat(dataset["last_complete_date"])
         today = self.today()
@@ -409,7 +408,7 @@ class Orchestrator:
             "periods": [p.to_dict() for p in periods],
             "delay_action_requested": delay_action,
             "max_tool_calls": s.ai_max_tool_calls,
-            "model_versions": self._model_versions,
+            "model_versions": model_versions,
         }
         mcp_info = {
             "protocol_version": session.protocol_version,
@@ -425,6 +424,7 @@ class Orchestrator:
             "build_id": dataset.get("build_id"),
             "live": False,
             "today": today.isoformat(),
+            "model_versions": model_versions,
         }
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -585,7 +585,7 @@ class Orchestrator:
         warnings += self._capability_warnings(run.evidence)
         evidence_map = {e.evidence_id: e for e in run.evidence}
         facts, conflicts = build_fact_index(run.evidence)
-        check = self._make_checker(evidence_map, facts, conflicts, q)
+        check = self._make_checker(evidence_map, facts, conflicts, q, model_versions)
 
         # ---- grounding + bounded regeneration
         attempts: list[dict[str, Any]] = []
@@ -635,7 +635,7 @@ class Orchestrator:
             fb_report = check(self._fallback(run.evidence, ctx))
             validation["fallback"] = fb_report.to_dict()
             run.add(kind="validation", name="fallback_summary", status="passed" if fb_report.ok else "failed")
-            run.claims = [c.to_dict() for c in fb_report.semantic.checks if c.ok]
+            run.claims = [c.to_dict() for c in fb_report.semantic.checks if c.ok] if fb_report.ok else []
             fb = (
                 fb_report.rendered
                 if fb_report.ok
@@ -705,10 +705,15 @@ class Orchestrator:
         return resp
 
     def _make_checker(
-        self, evidence: dict[str, Evidence], facts: list[Fact], conflicts: set[tuple[Any, ...]], q: str
+        self,
+        evidence: dict[str, Evidence],
+        facts: list[Fact],
+        conflicts: set[tuple[Any, ...]],
+        q: str,
+        model_versions: dict[str, str],
     ) -> Callable[[str], Verdict]:
         def check(answer: str) -> Verdict:
-            sem = evaluate_answer(answer, evidence, facts, conflicts, self._model_versions)
+            sem = evaluate_answer(answer, evidence, facts, conflicts, model_versions)
             legacy = validate_answer(sem.rendered, evidence, q, derived_numbers({c.claim.id: c for c in sem.checks}))
             if not sem.rendered.strip():
                 legacy.ok = False
