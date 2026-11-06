@@ -1,5 +1,7 @@
 # Deployment
 
+Milestone 4 readiness and blockers: [`DEPLOYMENT_READINESS.md`](DEPLOYMENT_READINESS.md).
+
 ## Milestone 2 status
 - **Docker: verified locally on 2026-11-04** (Docker Desktop 27.5.1).
   - `services/api/Dockerfile` is multi-stage. The builder installs `.[ml]` and trains

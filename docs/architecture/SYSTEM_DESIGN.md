@@ -66,3 +66,26 @@ per year of the two categories in scope.
   sent as a header and redacted by the log formatter. There are no client-side secrets.
 - **Errors**: unexpected exceptions return a generic 500. Details are logged server-side as
   structured JSON.
+
+## Milestone 4 additions
+
+```
+Browser ──► Next.js (/geo, /analyst, proxy /api/v1/*) ──► FastAPI
+  /api/v1/geo/boroughs ──► AnalyticsService (agg_daily_requests; prior period of equal length)
+  POST /api/v1/ai/investigations ──► paid-AI guard ─► concurrency gate ─► Orchestrator
+        Orchestrator ──► MCP client ──stdio──► civicpulse_mcp (one child per investigation)
+                     ──► evidence ─► facts ─► claim validation ─► rendered answer
+        result ──► InvestigationStore (bounded, expiring, client-scoped)
+  GET /api/v1/ai/investigations/{id}/report ──► report.py (JSON schema v1, Markdown, print HTML)
+```
+
+* **Geography:** MapLibre GL 6.15 over DCP Borough Boundaries (`gthc-hcne`, EPSG:4326), simplified offline by
+  `scripts/build_borough_geojson.py` (provenance in `docs/data/borough_boundaries.json`). No basemap tiles, no
+  request coordinates or addresses: counts are joined on the borough recorded in each request. Volume is drawn as
+  proportional circles over neutral shapes so land area is not read as volume; change uses a fixed ±50% scale.
+* **Semantic grounding:** see `docs/evaluation/SEMANTIC_GROUNDING.md`.
+* **Reports:** only validated claims; per-evidence SHA-256 and a timestamp-independent content checksum;
+  `python -m civicpulse_agent.report verify` re-validates offline without the LLM.
+* **MCP transport:** per-investigation stdio subprocess kept after benchmarking (`docs/performance/MCP_BENCHMARKS.md`).
+* **Process-local state:** rate limits, budget, concurrency gate and report store live in one API process;
+  multi-instance deployments need a shared store (`docs/deployment/DEPLOYMENT_READINESS.md`).

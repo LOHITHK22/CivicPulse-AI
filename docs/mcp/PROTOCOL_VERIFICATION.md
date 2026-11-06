@@ -51,6 +51,17 @@ one stdio server per investigation against the **full** snapshot (build `2026110
 All ten tools were called on the full snapshot during development, e.g. Brooklyn residential
 noise, October 2026: 11,861 requests; citywide heat on 2026-10-16: 2,432 actual vs 119.5 expected.
 
+## Milestone 4 re-verification
+
+* Docker Compose (2026-11-06): the in-container API spawned `civicpulse_mcp` over stdio, negotiated protocol
+  2025-11-25 and answered an investigation with `compare_boroughs` (11 validated claims); the report built from it
+  re-verified offline.
+* Benchmark (`scripts/mcp_benchmark.py`, real stdio subprocesses): session open median 1.93 s, warm tool call
+  0.17 s, close 0.39 s (`docs/performance/MCP_BENCHMARKS.md`).
+* The dataset resource now also carries `model_versions` and `model_run_id`; claim validation rejects evidence
+  whose model version is not the current one.
+* Agent evaluation: 70/70 scenarios through real stdio MCP (fake provider).
+
 ## Not verified
 
 - Interoperability with third-party MCP hosts (e.g. desktop AI clients) was not tested.
