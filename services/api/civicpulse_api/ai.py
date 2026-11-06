@@ -20,7 +20,7 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from civicpulse_agent.budget import BudgetExceeded, Prices, UsageGovernor
-from civicpulse_agent.config import AgentSettings
+from civicpulse_agent.config import AgentSettings, paid_ai_blockers
 from civicpulse_agent.orchestrator import InvestigationResult, Orchestrator
 from civicpulse_agent.policy import ALLOWED_TOOLS
 from civicpulse_agent.providers import ProviderError, build_provider
@@ -65,8 +65,53 @@ def get_orchestrator() -> Orchestrator:
     try:
         provider = build_provider(s)
     except ProviderError:
-        provider = None  # misconfigured (e.g. openai without key): analyst reports itself disabled
+        provider = None  # paid provider blocked or misconfigured: analyst reports itself disabled (fail closed)
     return Orchestrator(s, provider, get_governor())
+
+
+def disabled_reason(s: AgentSettings) -> str | None:
+    if s.llm_provider == "disabled":
+        return "disabled_by_configuration"
+    blockers = paid_ai_blockers(s)
+    return ",".join(blockers) if blockers else None
+
+
+class ConcurrencyGate:
+    """Non-blocking cap on investigations in flight, overall and per client (process-local, not shared)."""
+
+    def __init__(self, total: int, per_client: int) -> None:
+        self.total = total
+        self.per_client = per_client
+        self._active: dict[str, int] = {}
+        self._lock = threading.Lock()
+
+    def try_acquire(self, client: str) -> str | None:
+        """None when admitted; otherwise the limit that was hit."""
+        with self._lock:
+            if sum(self._active.values()) >= self.total:
+                return "server_busy"
+            if self._active.get(client, 0) >= self.per_client:
+                return "client_concurrency_limited"
+            self._active[client] = self._active.get(client, 0) + 1
+            return None
+
+    def release(self, client: str) -> None:
+        with self._lock:
+            n = self._active.get(client, 0) - 1
+            if n > 0:
+                self._active[client] = n
+            else:
+                self._active.pop(client, None)
+
+    def in_flight(self) -> int:
+        with self._lock:
+            return sum(self._active.values())
+
+
+@lru_cache(maxsize=1)
+def get_gate() -> ConcurrencyGate:
+    s = get_agent_settings()
+    return ConcurrencyGate(s.ai_max_concurrent, s.ai_max_concurrent_per_client)
 
 
 class InvestigationStore:
@@ -146,11 +191,15 @@ def build_router(client_key: Any) -> APIRouter:
         orch = get_orchestrator()
         p = orch.provider
         return {
-            "enabled": p is not None,
+            "enabled": p is not None and not paid_ai_blockers(s),
+            "disabled_reason": None
+            if p is not None and not paid_ai_blockers(s)
+            else disabled_reason(s) or "unavailable",
             "provider": p.name if p else "disabled",
             "model": p.model if p else None,
             "live_llm": bool(p and p.live),
             "auth_required": s.ai_access_token is not None,
+            "paid_ai": {"enabled": s.ai_paid_enabled, "blockers": paid_ai_blockers(s)},
             "limits": {
                 "max_tool_calls": s.ai_max_tool_calls,
                 "max_output_tokens": s.ai_max_output_tokens,
@@ -159,6 +208,8 @@ def build_router(client_key: Any) -> APIRouter:
                 "max_regenerations": s.ai_max_regenerations,
                 "rate_limit_per_minute": s.ai_rate_limit_per_minute,
                 "max_question_chars": s.ai_max_question_chars,
+                "max_concurrent": s.ai_max_concurrent,
+                "max_concurrent_per_client": s.ai_max_concurrent_per_client,
             },
             "usage": get_governor().snapshot(),
             "tools": sorted(ALLOWED_TOOLS),
@@ -174,14 +225,30 @@ def build_router(client_key: Any) -> APIRouter:
         authorization: Annotated[str | None, Header(max_length=300)] = None,
     ) -> Any:
         check_access(authorization)
+        s = get_agent_settings()
+        orch = get_orchestrator()
+        # Defense in depth: even if a paid provider object exists, any blocker (kill switch, missing token,
+        # budget or prices) refuses the request before a provider call can be made.
+        if orch.provider is not None and orch.provider.live and paid_ai_blockers(s):
+            log(logger, logging.WARNING, "ai_paid_blocked", blockers=paid_ai_blockers(s))
+            return JSONResponse({"detail": "AI analyst unavailable", "code": "paid_ai_blocked"}, 503)
         client = client_key(request)
+        gate = get_gate()
+        limited = gate.try_acquire(client)
+        if limited is not None:
+            log(logger, logging.WARNING, "ai_concurrency", reason=limited)
+            return JSONResponse(
+                {"detail": "Too many investigations in progress", "code": limited}, 429, headers={"Retry-After": "2"}
+            )
         try:
-            res = await get_orchestrator().investigate(body.question, client, body.history)
+            res = await orch.investigate(body.question, client, body.history)
         except BudgetExceeded as exc:
             code = 429 if exc.reason == "rate_limited" else 503
             headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after else None
             log(logger, logging.WARNING, "ai_budget", reason=exc.reason)
             return JSONResponse({"detail": "AI analyst limit reached", "code": exc.reason}, code, headers=headers)
+        finally:
+            gate.release(client)
         log(
             logger,
             logging.INFO,

@@ -341,7 +341,11 @@ class Orchestrator:
             return result("refused", screening.message, validation={"screening": screening.category})
         run.add(kind="policy", name="input_screening", status="passed")
         if self.provider is None:
-            return result("error", "The AI analyst is disabled on this server (CIVICPULSE_LLM_PROVIDER=disabled).")
+            return result(
+                "error",
+                "The AI analyst is not available on this server: it is disabled, or a paid provider is not fully "
+                "configured and authorized (see /api/v1/ai/status).",
+            )
         self.governor.admit(client_id)  # raises BudgetExceeded
 
         prior = [
