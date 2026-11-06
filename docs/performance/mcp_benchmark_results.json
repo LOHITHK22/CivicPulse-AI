@@ -1,0 +1,124 @@
+{
+  "generated_at": "2026-11-06T04:02:17+00:00",
+  "machine": {
+    "platform": "Windows-11-10.0.26300-SP0",
+    "python": "3.12.0",
+    "cpu_count": 16,
+    "free_memory_mb_at_start": 1973,
+    "free_memory_mb_at_end": 2186
+  },
+  "iterations": 10,
+  "data_dir_name": "data",
+  "calls": [
+    "compare_boroughs",
+    "get_service_request_trends",
+    "get_category_breakdown",
+    "get_dataset_quality"
+  ],
+  "results_ms": {
+    "spawn_imports": {
+      "n": 10,
+      "median": 1602.0,
+      "p90": 1699.6,
+      "p95": 1824.4,
+      "min": 1301.4,
+      "max": 1949.2
+    },
+    "session_open": {
+      "n": 10,
+      "median": 1928.3,
+      "p90": 2251.4,
+      "p95": 2280.6,
+      "min": 1610.0,
+      "max": 2309.8
+    },
+    "discovery": {
+      "n": 10,
+      "median": 90.5,
+      "p90": 118.7,
+      "p95": 119.3,
+      "min": 79.9,
+      "max": 119.9
+    },
+    "first_call": {
+      "n": 10,
+      "median": 382.8,
+      "p90": 489.6,
+      "p95": 559.6,
+      "min": 343.1,
+      "max": 629.5
+    },
+    "next_call": {
+      "n": 30,
+      "median": 174.4,
+      "p90": 206.4,
+      "p95": 216.1,
+      "min": 103.7,
+      "max": 262.7
+    },
+    "close": {
+      "n": 10,
+      "median": 386.7,
+      "p90": 541.8,
+      "p95": 542.0,
+      "min": 172.9,
+      "max": 542.2
+    },
+    "per_request_total": {
+      "n": 10,
+      "median": 3238.8,
+      "p90": 3923.0,
+      "p95": 4019.9,
+      "min": 2797.9,
+      "max": 4116.9
+    },
+    "reused_session": {
+      "n": 10,
+      "median": 238.8,
+      "p90": 339.0,
+      "p95": 345.6,
+      "min": 232.2,
+      "max": 352.3
+    },
+    "investigation_fake_provider": {
+      "n": 5,
+      "median": 3490.4,
+      "p90": 3815.9,
+      "p95": 3819.9,
+      "min": 2736.1,
+      "max": 3823.8
+    }
+  },
+  "memory_mb": {
+    "per_request_child_rss_after_calls": 203.8,
+    "persistent_child_rss_after_warm_runs": 205.4
+  },
+  "investigation": {
+    "question": "Which borough had the most residential noise complaints during October 2026?",
+    "status": "answered",
+    "tools": [
+      "compare_boroughs"
+    ],
+    "validation_ok": true
+  },
+  "concurrency": {
+    "k": 2,
+    "wall_ms": {
+      "n": 2,
+      "median": 4057.3,
+      "p90": 4162.3,
+      "p95": 4175.5,
+      "min": 3926.1,
+      "max": 4188.6
+    },
+    "per_session_total_ms": {
+      "n": 4,
+      "median": 4055.0,
+      "p90": 4186.8,
+      "p95": 4187.4,
+      "min": 3915.5,
+      "max": 4187.9
+    },
+    "free_memory_mb_before": 2209
+  }
+}
