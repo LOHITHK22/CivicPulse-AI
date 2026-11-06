@@ -1,10 +1,10 @@
 {
   "provider": "fake",
   "provider_is_live_llm": false,
-  "run_at_utc": "2026-11-05T01:04:18+00:00",
+  "run_at_utc": "2026-11-06T05:12:07+00:00",
   "today_used": "2026-11-04",
-  "scenarios": 60,
-  "passed": 60,
+  "scenarios": 70,
+  "passed": 70,
   "by_group": {
     "ambiguous": {
       "passed": 3,
@@ -66,6 +66,10 @@
       "passed": 3,
       "total": 3
     },
+    "semantic_grounding": {
+      "passed": 10,
+      "total": 10
+    },
     "simple_trend": {
       "passed": 5,
       "total": 5
@@ -102,9 +106,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 5,
+      "claims_valid": 5,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 1.99,
-      "answer_chars": 430,
+      "duration_s": 2.05,
+      "answer_chars": 590,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -124,9 +130,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 5,
+      "claims_valid": 5,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.3,
-      "answer_chars": 399,
+      "duration_s": 2.31,
+      "answer_chars": 553,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -146,9 +154,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 5,
+      "claims_valid": 5,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.15,
-      "answer_chars": 444,
+      "duration_s": 2.18,
+      "answer_chars": 584,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -168,9 +178,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 5,
+      "claims_valid": 5,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.17,
-      "answer_chars": 404,
+      "duration_s": 1.86,
+      "answer_chars": 572,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -190,9 +202,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 5,
+      "claims_valid": 5,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.09,
-      "answer_chars": 390,
+      "duration_s": 2.28,
+      "answer_chars": 584,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -212,9 +226,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 11,
+      "claims_valid": 11,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.36,
-      "answer_chars": 676,
+      "duration_s": 2.35,
+      "answer_chars": 896,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -234,9 +250,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 7,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.08,
-      "answer_chars": 541,
+      "duration_s": 1.97,
+      "answer_chars": 701,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -256,9 +274,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 7,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.2,
-      "answer_chars": 541,
+      "duration_s": 2.13,
+      "answer_chars": 701,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -278,9 +298,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 7,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.31,
-      "answer_chars": 505,
+      "duration_s": 2.02,
+      "answer_chars": 656,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -300,9 +322,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 11,
+      "claims_valid": 11,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.37,
-      "answer_chars": 669,
+      "duration_s": 2.25,
+      "answer_chars": 874,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -322,9 +346,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 5,
+      "claims_valid": 5,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.27,
-      "answer_chars": 406,
+      "duration_s": 2.29,
+      "answer_chars": 530,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -344,9 +370,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 8,
+      "claims_valid": 9,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.06,
-      "answer_chars": 481,
+      "duration_s": 1.93,
+      "answer_chars": 856,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -367,12 +395,14 @@
       ],
       "grounding_ok": true,
       "regenerations": 0,
-      "numbers_checked": 23,
+      "numbers_checked": 16,
+      "claims_valid": 9,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "caution"
       ],
-      "duration_s": 2.33,
-      "answer_chars": 2163,
+      "duration_s": 2.11,
+      "answer_chars": 1685,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -394,11 +424,13 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 24,
+      "claims_valid": 21,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "caution"
       ],
-      "duration_s": 2.07,
-      "answer_chars": 1588,
+      "duration_s": 2.03,
+      "answer_chars": 1731,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -420,11 +452,13 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 9,
+      "claims_valid": 10,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "restricted"
       ],
-      "duration_s": 2.06,
-      "answer_chars": 1404,
+      "duration_s": 2.13,
+      "answer_chars": 1409,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -443,12 +477,14 @@
       ],
       "grounding_ok": true,
       "regenerations": 0,
-      "numbers_checked": 15,
+      "numbers_checked": 8,
+      "claims_valid": 4,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "caution"
       ],
-      "duration_s": 2.29,
-      "answer_chars": 1435,
+      "duration_s": 1.91,
+      "answer_chars": 951,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -468,11 +504,13 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 38,
+      "claims_valid": 33,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "caution"
       ],
-      "duration_s": 2.3,
-      "answer_chars": 1481,
+      "duration_s": 1.79,
+      "answer_chars": 1893,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -492,11 +530,13 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 36,
+      "claims_valid": 32,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "caution"
       ],
-      "duration_s": 2.18,
-      "answer_chars": 1173,
+      "duration_s": 1.98,
+      "answer_chars": 1611,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -515,12 +555,14 @@
       ],
       "grounding_ok": true,
       "regenerations": 0,
-      "numbers_checked": 17,
+      "numbers_checked": 10,
+      "claims_valid": 5,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "caution"
       ],
-      "duration_s": 2.16,
-      "answer_chars": 1542,
+      "duration_s": 2.03,
+      "answer_chars": 1064,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -540,8 +582,10 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 6,
+      "claims_valid": 4,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.1,
+      "duration_s": 1.88,
       "answer_chars": 703,
       "mcp_protocol": "2025-11-25"
     },
@@ -562,8 +606,10 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 6,
+      "claims_valid": 4,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.14,
+      "duration_s": 2.12,
       "answer_chars": 703,
       "mcp_protocol": "2025-11-25"
     },
@@ -584,8 +630,10 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 6,
+      "claims_valid": 4,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.16,
+      "duration_s": 2.3,
       "answer_chars": 703,
       "mcp_protocol": "2025-11-25"
     },
@@ -605,10 +653,12 @@
       ],
       "grounding_ok": true,
       "regenerations": 0,
-      "numbers_checked": 5,
+      "numbers_checked": 3,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.0,
-      "answer_chars": 1074,
+      "duration_s": 1.96,
+      "answer_chars": 1075,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -627,10 +677,12 @@
       ],
       "grounding_ok": true,
       "regenerations": 0,
-      "numbers_checked": 5,
+      "numbers_checked": 3,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.01,
-      "answer_chars": 1074,
+      "duration_s": 2.09,
+      "answer_chars": 1075,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -649,10 +701,12 @@
       ],
       "grounding_ok": true,
       "regenerations": 0,
-      "numbers_checked": 5,
+      "numbers_checked": 3,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.04,
-      "answer_chars": 1074,
+      "duration_s": 2.18,
+      "answer_chars": 1075,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -672,8 +726,10 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 0,
+      "claims_valid": 1,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.21,
+      "duration_s": 2.17,
       "answer_chars": 300,
       "mcp_protocol": "2025-11-25"
     },
@@ -694,8 +750,10 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 0,
+      "claims_valid": 1,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.05,
+      "duration_s": 1.78,
       "answer_chars": 363,
       "mcp_protocol": "2025-11-25"
     },
@@ -716,8 +774,10 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 0,
+      "claims_valid": 1,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.09,
+      "duration_s": 1.72,
       "answer_chars": 338,
       "mcp_protocol": "2025-11-25"
     },
@@ -738,8 +798,10 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 0,
+      "claims_valid": 1,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 1.98,
+      "duration_s": 1.8,
       "answer_chars": 310,
       "mcp_protocol": "2025-11-25"
     },
@@ -756,9 +818,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 0,
+      "claims_valid": 0,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 1.94,
-      "answer_chars": 342,
+      "duration_s": 1.77,
+      "answer_chars": 346,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -774,9 +838,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 0,
+      "claims_valid": 0,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 1.88,
-      "answer_chars": 342,
+      "duration_s": 2.03,
+      "answer_chars": 346,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -792,9 +858,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 0,
+      "claims_valid": 0,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.24,
-      "answer_chars": 342,
+      "duration_s": 2.0,
+      "answer_chars": 346,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -814,11 +882,13 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 18,
+      "claims_valid": 17,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "caution"
       ],
-      "duration_s": 2.26,
-      "answer_chars": 1139,
+      "duration_s": 2.23,
+      "answer_chars": 1282,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -838,11 +908,13 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 18,
+      "claims_valid": 17,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "caution"
       ],
-      "duration_s": 2.35,
-      "answer_chars": 1125,
+      "duration_s": 1.95,
+      "answer_chars": 1268,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -862,11 +934,13 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 17,
+      "claims_valid": 16,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "caution"
       ],
-      "duration_s": 2.15,
-      "answer_chars": 836,
+      "duration_s": 2.01,
+      "answer_chars": 965,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -888,12 +962,14 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 9,
+      "claims_valid": 10,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "restricted",
         "restricted"
       ],
       "duration_s": 2.28,
-      "answer_chars": 1653,
+      "answer_chars": 1658,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -915,12 +991,14 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 9,
+      "claims_valid": 10,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "restricted",
         "restricted"
       ],
-      "duration_s": 2.47,
-      "answer_chars": 1653,
+      "duration_s": 2.13,
+      "answer_chars": 1658,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -942,11 +1020,13 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 9,
+      "claims_valid": 10,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "restricted"
       ],
-      "duration_s": 2.48,
-      "answer_chars": 1404,
+      "duration_s": 2.25,
+      "answer_chars": 1409,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -968,12 +1048,14 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 9,
+      "claims_valid": 10,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "restricted",
         "restricted"
       ],
-      "duration_s": 2.42,
-      "answer_chars": 1653,
+      "duration_s": 2.07,
+      "answer_chars": 1658,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -993,10 +1075,12 @@
       ],
       "grounding_ok": true,
       "regenerations": 0,
-      "numbers_checked": 5,
+      "numbers_checked": 3,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.19,
-      "answer_chars": 1186,
+      "duration_s": 2.35,
+      "answer_chars": 1187,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -1016,10 +1100,12 @@
       ],
       "grounding_ok": true,
       "regenerations": 0,
-      "numbers_checked": 5,
+      "numbers_checked": 3,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.37,
-      "answer_chars": 1167,
+      "duration_s": 1.98,
+      "answer_chars": 1168,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -1035,8 +1121,10 @@
       "grounding_ok": null,
       "regenerations": null,
       "numbers_checked": null,
+      "claims_valid": 0,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 1.81,
+      "duration_s": 1.9,
       "answer_chars": 90,
       "mcp_protocol": "2025-11-25"
     },
@@ -1060,10 +1148,12 @@
       ],
       "grounding_ok": true,
       "regenerations": 0,
-      "numbers_checked": 15,
+      "numbers_checked": 9,
+      "claims_valid": 21,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.18,
-      "answer_chars": 3058,
+      "duration_s": 2.51,
+      "answer_chars": 3061,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -1079,8 +1169,10 @@
       "grounding_ok": null,
       "regenerations": null,
       "numbers_checked": null,
+      "claims_valid": 0,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 5.29,
+      "duration_s": 5.4,
       "answer_chars": 107,
       "mcp_protocol": null
     },
@@ -1100,10 +1192,12 @@
       ],
       "grounding_ok": true,
       "regenerations": 1,
-      "numbers_checked": 5,
+      "numbers_checked": 3,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.31,
-      "answer_chars": 1074,
+      "duration_s": 2.08,
+      "answer_chars": 1075,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -1122,9 +1216,11 @@
       ],
       "grounding_ok": false,
       "regenerations": 1,
-      "numbers_checked": 6,
+      "numbers_checked": 1,
+      "claims_valid": 1,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.25,
+      "duration_s": 2.03,
       "answer_chars": 350,
       "mcp_protocol": "2025-11-25"
     },
@@ -1144,10 +1240,12 @@
       ],
       "grounding_ok": true,
       "regenerations": 1,
-      "numbers_checked": 5,
+      "numbers_checked": 3,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.3,
-      "answer_chars": 1074,
+      "duration_s": 2.15,
+      "answer_chars": 1075,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -1166,10 +1264,12 @@
       ],
       "grounding_ok": true,
       "regenerations": 1,
-      "numbers_checked": 5,
+      "numbers_checked": 3,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.16,
-      "answer_chars": 1074,
+      "duration_s": 2.53,
+      "answer_chars": 1075,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -1189,11 +1289,13 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 18,
+      "claims_valid": 17,
+      "first_attempt_claim_failures": [],
       "warnings": [
         "caution"
       ],
-      "duration_s": 1.96,
-      "answer_chars": 1067,
+      "duration_s": 2.2,
+      "answer_chars": 1210,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -1213,9 +1315,11 @@
       "grounding_ok": true,
       "regenerations": 0,
       "numbers_checked": 5,
+      "claims_valid": 5,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.02,
-      "answer_chars": 430,
+      "duration_s": 2.03,
+      "answer_chars": 590,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -1231,6 +1335,8 @@
       "grounding_ok": null,
       "regenerations": null,
       "numbers_checked": null,
+      "claims_valid": 0,
+      "first_attempt_claim_failures": [],
       "warnings": [],
       "duration_s": 0.0,
       "answer_chars": 124,
@@ -1249,6 +1355,8 @@
       "grounding_ok": null,
       "regenerations": null,
       "numbers_checked": null,
+      "claims_valid": 0,
+      "first_attempt_claim_failures": [],
       "warnings": [],
       "duration_s": 0.0,
       "answer_chars": 124,
@@ -1267,6 +1375,8 @@
       "grounding_ok": null,
       "regenerations": null,
       "numbers_checked": null,
+      "claims_valid": 0,
+      "first_attempt_claim_failures": [],
       "warnings": [],
       "duration_s": 0.0,
       "answer_chars": 124,
@@ -1288,10 +1398,12 @@
       ],
       "grounding_ok": true,
       "regenerations": 0,
-      "numbers_checked": 5,
+      "numbers_checked": 3,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [],
       "warnings": [],
-      "duration_s": 2.13,
-      "answer_chars": 1074,
+      "duration_s": 1.9,
+      "answer_chars": 1075,
       "mcp_protocol": "2025-11-25"
     },
     {
@@ -1307,6 +1419,8 @@
       "grounding_ok": null,
       "regenerations": null,
       "numbers_checked": null,
+      "claims_valid": 0,
+      "first_attempt_claim_failures": [],
       "warnings": [],
       "duration_s": 0.0,
       "answer_chars": 228,
@@ -1325,6 +1439,8 @@
       "grounding_ok": null,
       "regenerations": null,
       "numbers_checked": null,
+      "claims_valid": 0,
+      "first_attempt_claim_failures": [],
       "warnings": [],
       "duration_s": 0.0,
       "answer_chars": 228,
@@ -1343,6 +1459,8 @@
       "grounding_ok": null,
       "regenerations": null,
       "numbers_checked": null,
+      "claims_valid": 0,
+      "first_attempt_claim_failures": [],
       "warnings": [],
       "duration_s": 0.0,
       "answer_chars": 228,
@@ -1361,6 +1479,8 @@
       "grounding_ok": null,
       "regenerations": null,
       "numbers_checked": null,
+      "claims_valid": 0,
+      "first_attempt_claim_failures": [],
       "warnings": [],
       "duration_s": 0.0,
       "answer_chars": 141,
@@ -1379,6 +1499,8 @@
       "grounding_ok": null,
       "regenerations": null,
       "numbers_checked": null,
+      "claims_valid": 0,
+      "first_attempt_claim_failures": [],
       "warnings": [],
       "duration_s": 0.0,
       "answer_chars": 141,
@@ -1397,10 +1519,272 @@
       "grounding_ok": null,
       "regenerations": null,
       "numbers_checked": null,
+      "claims_valid": 0,
+      "first_attempt_claim_failures": [],
       "warnings": [],
       "duration_s": 0.0,
       "answer_chars": 141,
       "mcp_protocol": null
+    },
+    {
+      "id": "sem-01",
+      "group": "semantic_grounding",
+      "question": "How did Brooklyn compare with Queens for noise last month?",
+      "fault": "wrong_borough",
+      "passed": true,
+      "failures": [],
+      "status": "answered",
+      "tools": [
+        "compare_boroughs:ok"
+      ],
+      "evidence_ids": [
+        "E1"
+      ],
+      "grounding_ok": true,
+      "regenerations": 1,
+      "numbers_checked": 7,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [
+        "value_mismatch"
+      ],
+      "warnings": [],
+      "duration_s": 2.18,
+      "answer_chars": 701,
+      "mcp_protocol": "2025-11-25"
+    },
+    {
+      "id": "sem-02",
+      "group": "semantic_grounding",
+      "question": "How did Brooklyn compare with Queens for noise last month?",
+      "fault": "wrong_category",
+      "passed": true,
+      "failures": [],
+      "status": "answered",
+      "tools": [
+        "compare_boroughs:ok"
+      ],
+      "evidence_ids": [
+        "E1"
+      ],
+      "grounding_ok": true,
+      "regenerations": 1,
+      "numbers_checked": 7,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [
+        "category_mismatch"
+      ],
+      "warnings": [],
+      "duration_s": 2.32,
+      "answer_chars": 701,
+      "mcp_protocol": "2025-11-25"
+    },
+    {
+      "id": "sem-03",
+      "group": "semantic_grounding",
+      "question": "How did Brooklyn compare with Queens for noise last month?",
+      "fault": "wrong_period",
+      "passed": true,
+      "failures": [],
+      "status": "answered",
+      "tools": [
+        "compare_boroughs:ok"
+      ],
+      "evidence_ids": [
+        "E1"
+      ],
+      "grounding_ok": true,
+      "regenerations": 1,
+      "numbers_checked": 7,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [
+        "period_mismatch"
+      ],
+      "warnings": [],
+      "duration_s": 2.24,
+      "answer_chars": 701,
+      "mcp_protocol": "2025-11-25"
+    },
+    {
+      "id": "sem-04",
+      "group": "semantic_grounding",
+      "question": "How did Brooklyn compare with Queens for noise last month?",
+      "fault": "wrong_unit",
+      "passed": true,
+      "failures": [],
+      "status": "answered",
+      "tools": [
+        "compare_boroughs:ok"
+      ],
+      "evidence_ids": [
+        "E1"
+      ],
+      "grounding_ok": true,
+      "regenerations": 1,
+      "numbers_checked": 7,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [
+        "unit_mismatch"
+      ],
+      "warnings": [],
+      "duration_s": 2.47,
+      "answer_chars": 701,
+      "mcp_protocol": "2025-11-25"
+    },
+    {
+      "id": "sem-05",
+      "group": "semantic_grounding",
+      "question": "How did Brooklyn compare with Queens for noise last month?",
+      "fault": "wrong_denominator",
+      "passed": true,
+      "failures": [],
+      "status": "answered",
+      "tools": [
+        "compare_boroughs:ok"
+      ],
+      "evidence_ids": [
+        "E1"
+      ],
+      "grounding_ok": true,
+      "regenerations": 1,
+      "numbers_checked": 7,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [
+        "invalid_denominator"
+      ],
+      "warnings": [],
+      "duration_s": 2.18,
+      "answer_chars": 701,
+      "mcp_protocol": "2025-11-25"
+    },
+    {
+      "id": "sem-06",
+      "group": "semantic_grounding",
+      "question": "How did Brooklyn compare with Queens for noise last month?",
+      "fault": "wrong_direction",
+      "passed": true,
+      "failures": [],
+      "status": "answered",
+      "tools": [
+        "compare_boroughs:ok"
+      ],
+      "evidence_ids": [
+        "E1"
+      ],
+      "grounding_ok": true,
+      "regenerations": 1,
+      "numbers_checked": 7,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [
+        "direction_incorrect"
+      ],
+      "warnings": [],
+      "duration_s": 2.17,
+      "answer_chars": 701,
+      "mcp_protocol": "2025-11-25"
+    },
+    {
+      "id": "sem-07",
+      "group": "semantic_grounding",
+      "question": "How many residential noise complaints were there last month?",
+      "fault": "missing_citation",
+      "passed": true,
+      "failures": [],
+      "status": "answered",
+      "tools": [
+        "get_service_request_trends:ok"
+      ],
+      "evidence_ids": [
+        "E1"
+      ],
+      "grounding_ok": true,
+      "regenerations": 1,
+      "numbers_checked": 5,
+      "claims_valid": 5,
+      "first_attempt_claim_failures": [
+        "missing_citation"
+      ],
+      "warnings": [],
+      "duration_s": 2.23,
+      "answer_chars": 590,
+      "mcp_protocol": "2025-11-25"
+    },
+    {
+      "id": "sem-08",
+      "group": "semantic_grounding",
+      "question": "What does the model forecast for heat in the Bronx next week?",
+      "fault": "stale_model",
+      "passed": true,
+      "failures": [],
+      "status": "answered",
+      "tools": [
+        "forecast_request_volume:ok"
+      ],
+      "evidence_ids": [
+        "E1"
+      ],
+      "grounding_ok": true,
+      "regenerations": 1,
+      "numbers_checked": 38,
+      "claims_valid": 33,
+      "first_attempt_claim_failures": [
+        "model_version_mismatch"
+      ],
+      "warnings": [
+        "caution"
+      ],
+      "duration_s": 2.26,
+      "answer_chars": 1871,
+      "mcp_protocol": "2025-11-25"
+    },
+    {
+      "id": "sem-09",
+      "group": "semantic_grounding",
+      "question": "Which borough had the lowest number of heat complaints last month?",
+      "fault": "wrong_borough",
+      "passed": true,
+      "failures": [],
+      "status": "answered",
+      "tools": [
+        "compare_boroughs:ok"
+      ],
+      "evidence_ids": [
+        "E1"
+      ],
+      "grounding_ok": true,
+      "regenerations": 1,
+      "numbers_checked": 11,
+      "claims_valid": 11,
+      "first_attempt_claim_failures": [
+        "value_mismatch"
+      ],
+      "warnings": [],
+      "duration_s": 2.44,
+      "answer_chars": 874,
+      "mcp_protocol": "2025-11-25"
+    },
+    {
+      "id": "sem-10",
+      "group": "semantic_grounding",
+      "question": "How did Brooklyn compare with Queens for noise last month?",
+      "fault": "invented_percentage",
+      "passed": true,
+      "failures": [],
+      "status": "answered",
+      "tools": [
+        "compare_boroughs:ok"
+      ],
+      "evidence_ids": [
+        "E1"
+      ],
+      "grounding_ok": true,
+      "regenerations": 1,
+      "numbers_checked": 7,
+      "claims_valid": 7,
+      "first_attempt_claim_failures": [],
+      "warnings": [],
+      "duration_s": 2.3,
+      "answer_chars": 701,
+      "mcp_protocol": "2025-11-25"
     }
   ]
 }
