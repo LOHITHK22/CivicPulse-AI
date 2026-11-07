@@ -30,14 +30,19 @@ COPY services/api ./services/api
 COPY services/mcp ./services/mcp
 COPY configs ./configs
 RUN pip install . \
- && useradd --system --uid 10001 app
+ && useradd --system --uid 10001 app \
+ && mkdir -p /app/artifacts && chown app /app/artifacts
 COPY --from=builder --chown=app /app/sample-data /app/sample-data
 
 USER app
-# Default to the bundled real-data sample; mount a full warehouse at /app/data and set
-# CIVICPULSE_DATA_DIR=/app/data to serve the complete snapshot (and its trained models).
-ENV CIVICPULSE_DATA_DIR=/app/sample-data
+# Data source, in order:
+#  * CIVICPULSE_ARTIFACT_URL + CIVICPULSE_ARTIFACT_SHA256: the pinned full snapshot is downloaded, verified and
+#    installed under /app/artifacts at start (reused if already present), then served (deployments);
+#  * otherwise the bundled real-data sample (or a warehouse mounted at /app/data with CIVICPULSE_DATA_DIR).
+# CIVICPULSE_REQUIRE_ARTIFACT=true refuses to start on the sample. See docs/deployment/ARTIFACT_MANIFEST.md.
+ENV CIVICPULSE_DATA_DIR=/app/sample-data PORT=8000
 EXPOSE 8000
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/ready').status==200 else 1)"
-CMD ["uvicorn", "civicpulse_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "127.0.0.1"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD python -c "import os,urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:%s/health/ready' % os.environ.get('PORT','8000')).status==200 else 1)"
+# start.py restores artifacts, then execs uvicorn (one worker, bounded concurrency, graceful shutdown on SIGTERM).
+CMD ["python", "/app/services/api/start.py"]

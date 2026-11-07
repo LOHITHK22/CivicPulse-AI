@@ -73,3 +73,55 @@ jobs:
           name: playwright-report
           path: apps/web/playwright-report
           retention-days: 7
+
+  container:
+    name: Container build and deployment smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -f services/api/Dockerfile -t civicpulse-api:ci .
+      - name: Package the bundled sample as a pinned snapshot artifact
+        run: |
+          mkdir -p dist && chmod 777 dist
+          docker run --rm -v "$PWD/dist:/dist" --entrypoint python civicpulse-api:ci \
+            -m civicpulse_shared.artifacts pack --data-dir /app/sample-data --out /dist > dist/pack.json
+          python3 -c "import json; m=json.load(open('dist/pack.json')); print(m['snapshot_id'], m['archive_bytes'])"
+      - name: Start like staging (pinned artifact, proxy-only API, 1 GiB, paid AI off)
+        run: |
+          SECRET=$(openssl rand -hex 24)
+          echo "::add-mask::$SECRET"
+          echo "PROXY_SECRET=$SECRET" >> "$GITHUB_ENV"
+          ARCHIVE=$(python3 -c "import json; print(json.load(open('dist/pack.json'))['archive'])")
+          SHA=$(python3 -c "import json; print(json.load(open('dist/pack.json'))['archive_sha256'])")
+          docker run -d --name api -p 8000:8000 --memory 1g -v "$PWD/dist:/a:ro" \
+            -e CIVICPULSE_ARTIFACT_URL="/a/$ARCHIVE" -e CIVICPULSE_ARTIFACT_SHA256="$SHA" \
+            -e CIVICPULSE_REQUIRE_ARTIFACT=true -e CIVICPULSE_API_REQUIRE_PROXY_AUTH=true \
+            -e CIVICPULSE_API_PROXY_SECRET="$SECRET" civicpulse-api:ci
+          for i in $(seq 1 90); do curl -fs localhost:8000/health/ready > /dev/null && break; sleep 1; done
+          curl -fs localhost:8000/health/ready > /dev/null
+      - name: API, MCP and security smoke checks
+        run: |
+          code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
+          P="X-CivicPulse-Proxy-Auth: $PROXY_SECRET"
+          test "$(code localhost:8000/api/v1/metrics/kpis)" = 401          # direct call without the proxy secret
+          test "$(code -H "$P" localhost:8000/api/v1/metrics/kpis)" = 200
+          test "$(code -H "$P" localhost:8000/api/v1/geo/boroughs)" = 200
+          test "$(code -H "$P" localhost:8000/api/v1/models/forecast/evaluation)" = 200
+          test "$(code localhost:8000/docs)" = 404                          # no docs/schema on the backend
+          curl -fs -H "$P" localhost:8000/api/v1/ai/status | python3 -c "import json,sys; s=json.load(sys.stdin); assert s['provider']=='fake' and not s['live_llm'] and not s['paid_ai']['enabled'], s"
+          curl -fs -X POST -H "$P" -H 'Content-Type: application/json' -d '{"question":"How fresh is the data?"}' \
+            localhost:8000/api/v1/ai/investigations \
+            | python3 -c "import json,sys; r=json.load(sys.stdin); assert r['status']=='answered' and r['mcp']['transport']=='stdio', r['status']"
+          docker logs api 2>&1 | grep -q '"event": "artifact_ready"'
+      - name: A wrong pinned checksum refuses to start
+        run: |
+          ARCHIVE=$(python3 -c "import json; print(json.load(open('dist/pack.json'))['archive'])")
+          if docker run --rm -v "$PWD/dist:/a:ro" -e CIVICPULSE_ARTIFACT_URL="/a/$ARCHIVE" \
+               -e CIVICPULSE_ARTIFACT_SHA256="$(printf '0%.0s' $(seq 1 64))" civicpulse-api:ci; then
+            echo "container started with a wrong checksum" && exit 1
+          fi
+      - name: Container logs
+        if: always()
+        run: docker logs api 2>&1 | tail -40; docker rm -f api || true

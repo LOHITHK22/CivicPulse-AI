@@ -4,10 +4,11 @@ A personal engineering project. It is an end-to-end analytics platform on **real
 requests** (residential noise, heat/hot water). It is built in milestones, and only what is
 listed as done below has been implemented and verified.
 
-> **Status: Milestone 4 (geographic intelligence, semantic grounding, verified reports, paid-AI
-> controls) implemented and awaiting review.** Milestones 1–3 were approved. The AI analyst has been
-> verified only with a deterministic **fake** provider; no real LLM has been run through it (the
-> authorized smoke test is blocked pending approval). See [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md).
+> **Status: Milestone 5 (deployment preparation) awaiting review.** Milestones 1–4 are merged. The
+> deployment path is implemented and verified in a production-like local Docker staging: pinned snapshot
+> artifacts, a server-side proxy and a proxy-only API. **No cloud environment is deployed.** The AI analyst runs
+> only in deterministic demonstration mode, and no real LLM has been run through it. See
+> [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md).
 
 ![Operations overview](docs/screenshots/overview.png)
 
@@ -198,3 +199,7 @@ AI: [AI readiness audit](docs/evaluation/AI_READINESS_AUDIT.md) · [Agent evalua
 [MCP architecture](docs/mcp/ARCHITECTURE.md) · [AI threat model](docs/security/AI_THREAT_MODEL.md) ·
 [Semantic grounding](docs/evaluation/SEMANTIC_GROUNDING.md) · [MCP benchmarks](docs/performance/MCP_BENCHMARKS.md) ·
 [Deployment readiness](docs/deployment/DEPLOYMENT_READINESS.md) · [Borough boundaries provenance](docs/data/borough_boundaries.json)
+Deployment (M5): [Hosting decision](docs/deployment/HOSTING_DECISION.md) · [Cost](docs/deployment/COST_ESTIMATE.md) ·
+[Architecture](docs/deployment/ARCHITECTURE.md) · [Artifacts](docs/deployment/ARTIFACT_MANIFEST.md) ·
+[Environment](docs/deployment/ENVIRONMENT_VARIABLES.md) · [Staging verification](docs/deployment/STAGING_VERIFICATION.md) ·
+[Production checklist](docs/deployment/PRODUCTION_CHECKLIST.md) · [Platform setup](docs/deployment/PLATFORM_SETUP.md) · [Rollback](docs/deployment/ROLLBACK.md)

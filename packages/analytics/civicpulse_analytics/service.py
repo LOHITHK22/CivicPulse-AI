@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
+import re
 import threading
 import time
 from collections import OrderedDict
@@ -118,10 +120,32 @@ class DataUnavailableError(RuntimeError):
     """The warehouse has not been built yet (or files are missing)."""
 
 
+_DUCKDB_MEMORY = re.compile(r"^\d{1,6}(KB|MB|GB|KiB|MiB|GiB)$")
+
+
+def connect_duckdb() -> duckdb.DuckDBPyConnection:
+    """In-memory DuckDB connection with optional resource caps for small containers.
+
+    CIVICPULSE_DUCKDB_MEMORY_LIMIT (e.g. ``384MB``) and CIVICPULSE_DUCKDB_THREADS (e.g. ``2``) bound each
+    connection; unset means DuckDB defaults. Invalid values are refused rather than ignored."""
+    con = duckdb.connect(":memory:")
+    mem = os.environ.get("CIVICPULSE_DUCKDB_MEMORY_LIMIT", "").strip()
+    threads = os.environ.get("CIVICPULSE_DUCKDB_THREADS", "").strip()
+    if mem:
+        if not _DUCKDB_MEMORY.match(mem):
+            raise ValueError("CIVICPULSE_DUCKDB_MEMORY_LIMIT must look like 384MB or 1GB")
+        con.execute(f"SET memory_limit='{mem}'")
+    if threads:
+        if not threads.isdigit() or not 1 <= int(threads) <= 64:
+            raise ValueError("CIVICPULSE_DUCKDB_THREADS must be an integer from 1 to 64")
+        con.execute(f"SET threads={int(threads)}")
+    return con
+
+
 class AnalyticsService:
     def __init__(self, data_dir: Path, *, cache_size: int = 256) -> None:
         self.paths = DataPaths(Path(data_dir))
-        self._con = duckdb.connect(":memory:")
+        self._con = connect_duckdb()
         self._con.execute("SET TimeZone='UTC'")
         self._lock = threading.Lock()
         self._cache: OrderedDict[str, Any] = OrderedDict()

@@ -1,0 +1,46 @@
+# CivicPulse AI API — STAGING on Fly.io. Prepared, NOT deployed (needs an approved Fly.io account; see
+# docs/deployment/HOSTING_DECISION.md and COST_ESTIMATE.md). Deploy from the repository root with an explicit
+# config and Dockerfile, pinned to a reviewed commit:
+#   fly deploy --config deploy/fly.staging.toml --dockerfile services/api/Dockerfile --ha=false
+# Secrets are set with `fly secrets set` (never in this file): CIVICPULSE_API_PROXY_SECRET,
+# CIVICPULSE_AI_ACCESS_TOKEN, CIVICPULSE_ARTIFACT_SHA256 (+ CIVICPULSE_ARTIFACT_TOKEN only for a private URL).
+app = "civicpulse-api-staging"        # placeholder: must be unique on Fly.io
+primary_region = "iad"                # Ashburn, VA: same metro as the Vercel iad1 function region (low proxy latency)
+
+[env]
+  PORT = "8000"
+  CIVICPULSE_REQUIRE_ARTIFACT = "true"
+  CIVICPULSE_ARTIFACT_URL = "REPLACE_WITH_APPROVED_SNAPSHOT_URL"   # https only; see ARTIFACT_MANIFEST.md
+  CIVICPULSE_ARTIFACT_ROOT = "/app/artifacts"
+  CIVICPULSE_API_REQUIRE_PROXY_AUTH = "true"   # API answers /api/* only to the Next.js proxy
+  CIVICPULSE_API_TRUSTED_PROXY_HOPS = "0"      # client identity comes from the authenticated proxy, not XFF
+  CIVICPULSE_API_CORS_ORIGINS = "REPLACE_WITH_STAGING_FRONTEND_ORIGIN"
+  CIVICPULSE_API_MAX_CONNECTIONS = "32"
+  CIVICPULSE_DUCKDB_MEMORY_LIMIT = "512MB"
+  CIVICPULSE_DUCKDB_THREADS = "2"
+  CIVICPULSE_LLM_PROVIDER = "fake"             # deterministic demonstration mode
+  CIVICPULSE_LLM_MODEL = "deterministic-fake-v1"
+  CIVICPULSE_AI_PAID_ENABLED = "false"         # paid AI kill switch stays off
+  CIVICPULSE_LOG_LEVEL = "INFO"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"         # staging: stop when idle (no compute billed while stopped)
+  auto_start_machines = true          # cold start on the next request (artifact re-verified/re-downloaded)
+  min_machines_running = 0
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 16
+    hard_limit = 32
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/health/ready"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "60s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"                      # measured peak 373 MiB on the full snapshot; 512 MB leaves no headroom
