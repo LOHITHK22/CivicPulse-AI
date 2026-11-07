@@ -8,7 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -48,7 +48,27 @@ class Settings(BaseSettings):
     # The Next.js rewrite proxy does NOT append to X-Forwarded-For (verified 2026-11-03), so it
     # does not count as a hop; only an edge load balancer/CDN that appends the peer IP does.
     api_trusted_proxy_hops: int = Field(default=0, ge=0, le=5)
+    # Shared secret between the Next.js server-side proxy and the API. A request carrying it in
+    # X-CivicPulse-Proxy-Auth is from the proxy, so its X-CivicPulse-Client value (the browser's
+    # address as seen by the hosting edge) is trusted for rate limits and report ownership.
+    api_proxy_secret: SecretStr | None = None
+    # When true, every /api/* request must carry the proxy secret (the API is reachable only via
+    # the proxy even if its URL is public). Health endpoints stay open for platform checks.
+    api_require_proxy_auth: bool = False
     log_level: str = "INFO"
+
+    @field_validator("api_proxy_secret", mode="before")
+    @classmethod
+    def _blank_secret_is_none(cls, v: object) -> object:
+        return None if isinstance(v, str) and not v.strip() else v
+
+    @model_validator(mode="after")
+    def _proxy_auth_needs_secret(self) -> Settings:
+        if self.api_require_proxy_auth:
+            secret = self.api_proxy_secret.get_secret_value() if self.api_proxy_secret else ""
+            if len(secret) < 32:  # fail closed: proxy-only mode without a strong secret is a misconfiguration
+                raise ValueError("CIVICPULSE_API_REQUIRE_PROXY_AUTH needs CIVICPULSE_API_PROXY_SECRET (>= 32 chars)")
+        return self
 
     @property
     def cors_origins(self) -> list[str]:

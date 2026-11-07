@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import csv
 import datetime as dt
+import hmac
 import io
 import logging
+import re
 import time
 import uuid
 from collections.abc import Awaitable, Callable
@@ -86,9 +88,30 @@ ModelName = Annotated[str, FastAPIPath(pattern=r"^(forecast|delay_risk|anomaly)$
 ServiceDep = Annotated[AnalyticsService, Depends(get_service)]
 
 
-def client_key(request: Request, trusted_hops: int) -> str:
-    """Rate-limit identity. Uses X-Forwarded-For only when trusted proxies append to it:
-    the entry `trusted_hops` from the right is the address the outermost trusted proxy saw."""
+PROXY_AUTH_HEADER = "x-civicpulse-proxy-auth"
+PROXY_CLIENT_HEADER = "x-civicpulse-client"
+_CLIENT_ID = re.compile(r"^[0-9A-Fa-f:.]{2,45}$")  # an IPv4/IPv6 literal, nothing else
+
+
+def proxy_authenticated(request: Request, proxy_secret: str | None) -> bool:
+    """True when the request carries the shared proxy secret (constant-time comparison)."""
+    if not proxy_secret:
+        return False
+    given = request.headers.get(PROXY_AUTH_HEADER) or ""
+    return hmac.compare_digest(given.encode(), proxy_secret.encode())
+
+
+def client_key(request: Request, trusted_hops: int, proxy_secret: str | None = None) -> str:
+    """Rate-limit and report-ownership identity.
+
+    1. Requests from the authenticated Next.js proxy: the client address the proxy forwarded.
+    2. Otherwise X-Forwarded-For only when trusted proxies append to it: the entry `trusted_hops`
+       from the right is the address the outermost trusted proxy saw.
+    3. Otherwise the socket peer."""
+    if proxy_authenticated(request, proxy_secret):
+        forwarded = (request.headers.get(PROXY_CLIENT_HEADER) or "").strip()
+        if _CLIENT_ID.match(forwarded):
+            return f"via-proxy:{forwarded}"
     peer = request.client.host if request.client else "unknown"
     if trusted_hops <= 0:
         return peer
@@ -107,8 +130,13 @@ def create_app() -> FastAPI:
         description="Read-only analytics and precomputed model outputs over NYC 311 service requests "
         "(NYC Open Data erm2-nwe9). Data is a versioned snapshot; see /api/v1/quality for freshness. "
         "Models are trained offline; no endpoint trains or executes a model.",
+        # Proxy-only deployments expose no interactive docs or schema on the (possibly public) backend URL.
+        docs_url=None if settings.api_require_proxy_auth else "/docs",
+        redoc_url=None if settings.api_require_proxy_auth else "/redoc",
+        openapi_url=None if settings.api_require_proxy_auth else "/openapi.json",
     )
     limiter = TokenBucketLimiter(settings.api_rate_limit_per_minute)
+    proxy_secret = settings.api_proxy_secret.get_secret_value() if settings.api_proxy_secret else None
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -136,7 +164,13 @@ def create_app() -> FastAPI:
                 return JSONResponse({"detail": "request body too large"}, status_code=413)
         if len(str(request.url)) > MAX_URL_LENGTH:
             return JSONResponse({"detail": "request URL too long"}, status_code=414)
-        client = client_key(request, settings.api_trusted_proxy_hops)
+        if (
+            settings.api_require_proxy_auth
+            and request.url.path.startswith("/api/")
+            and not proxy_authenticated(request, proxy_secret)
+        ):
+            return JSONResponse({"detail": "proxy authentication required"}, status_code=401)
+        client = client_key(request, settings.api_trusted_proxy_hops, proxy_secret)
         if request.url.path.startswith("/api/"):
             allowed, retry = limiter.allow(client)
             if not allowed:
@@ -357,7 +391,7 @@ def create_app() -> FastAPI:
             raise HTTPException(422, "end must be on or after start")
         return pred.anomaly_series(category, borough, start, end)
 
-    app.include_router(build_router(lambda request: client_key(request, settings.api_trusted_proxy_hops)))
+    app.include_router(build_router(lambda request: client_key(request, settings.api_trusted_proxy_hops, proxy_secret)))
     return app
 
 
