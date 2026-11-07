@@ -43,7 +43,7 @@ cd apps/web && npx next build && npx next start -p 3000      # http://localhost:
 ## Configuration that matters in production
 | Setting | Notes |
 |---|---|
-| `API_BASE_URL` (web) | **Baked in at `next build` time** (rewrite destinations are fixed at build). Rebuild the web app to change it. |
+| `API_BASE_URL` (web) | Read at **runtime** by the server-side proxy route handlers (Milestone 5; previously baked in at build by rewrites). See `ENVIRONMENT_VARIABLES.md`. |
 | `CIVICPULSE_API_TRUSTED_PROXY_HOPS` | Default 0 means `X-Forwarded-For` is ignored. The Next.js proxy forwards client-supplied XFF verbatim, so trusting it would allow rate-limit evasion. Set it to N only when N edge proxies **append** the client IP. |
 | `CIVICPULSE_API_RATE_LIMIT_PER_MINUTE` | Default 600, per client key. Without trusted hops, all traffic via the web proxy shares one bucket. One dashboard load makes ~10 API calls. |
 | `CIVICPULSE_API_CORS_ORIGINS` | Only needed if browsers call the API directly (they don't in the default setup). |

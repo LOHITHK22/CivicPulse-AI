@@ -1,7 +1,32 @@
 # Project status
 
-Last updated: 2026-11-06. Current milestone: **4, implemented and awaiting review** (branch
-`feature/milestone-4-product-completion`, PR to `main`, not merged, not deployed). Milestones 1–3 were approved.
+Last updated: 2026-11-06. Current milestone: **5, deployment preparation, awaiting review** (branch
+`feature/milestone-5-deployment`, PR to `main`, not merged). **Cloud staging is not deployed**: it needs an
+approved account, payment card and snapshot publication. Milestones 1–4 are merged into `main`.
+
+## Milestone 5: Deployment preparation
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Hosting decision and cost (Vercel Hobby + one Fly.io 1 GB machine; ≈ $0–3 staging, ≈ $7–8 production) | Researched, **not provisioned** | `docs/deployment/HOSTING_DECISION.md`, `COST_ESTIMATE.md` |
+| Snapshot artifacts (pack, SHA-256 manifest, pinned restore, safe extraction, atomic install, reuse) | Implemented, tested; full snapshot packed locally (85.7 MB), **not published** | `docs/deployment/ARTIFACT_MANIFEST.md`, `tests/test_artifacts.py` |
+| Container entrypoint (restore, fail closed, 1 worker, concurrency cap, graceful shutdown, non-root) | Implemented, tested | `services/api/start.py`, `services/api/tests/test_start.py` |
+| Server-side Next.js proxy (token injection, proxy secret, client address, credential stripping) | Implemented, tested | `apps/web/lib/server/proxy.ts`, `proxy.test.ts` |
+| Proxy-only API mode; client attribution and report ownership behind the proxy | Implemented, tested | `services/api/tests/test_api_proxy.py` |
+| Production-like local staging (Docker, full snapshot, proxy-only, 1 GiB cap) | Verified; peak API memory 373 MiB | `docs/deployment/STAGING_VERIFICATION.md` |
+| CI: container build + staging-like smoke | Added | `.github/workflows/ci.yml` (`container` job) |
+| Cloud staging / production | **Not deployed** (blocked on approval and accounts) | `docs/deployment/PRODUCTION_CHECKLIST.md` |
+
+### Verification (2026-11-06)
+- `pytest`: 369 passed, 3 deselected (opt-in `live` tests); ruff check, ruff format, `mypy --strict` clean.
+- Frontend: tsc, eslint, `npm run test:unit` (15/15), `next build` clean; Playwright 48/48 (1 worker).
+- Docker Compose (production-like overlay): all checks in `STAGING_VERIFICATION.md`.
+- gitleaks 8.30.1: no leaks in branch commits, full history, or tracked + untracked working-tree files.
+
+### Known limitations (Milestone 5)
+- No cloud deployment; real HTTPS, cold starts, Vercel client-IP header and artifact download are unverified.
+- Limits and reports remain process-local; one instance only. Reports do not survive restarts.
+- The app CSP omits `script-src`. No live LLM is verified; paid AI stays disabled.
 
 ## Milestone 4: Product completion
 

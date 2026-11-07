@@ -23,6 +23,11 @@ Local and container verification only (2026-11-05/06).
 
 ## Required before public use
 
+> **Milestone 5 update (2026-11-06):** items 1–3 are implemented and verified locally. Item 1: the server-side
+> proxy injects the token. Item 3: the proxy secret plus a forwarded client address replaces trusted hops.
+> Item 2: a single instance is enforced by configuration, and the limits stay process-local. See
+> `ARCHITECTURE.md` and `STAGING_VERIFICATION.md`. Cloud staging is not deployed yet.
+
 1. Set `CIVICPULSE_AI_ACCESS_TOKEN` and inject it **server-side** (a proxy or route handler). The browser bundle
    has no token, so with a token set the public UI cannot call the analyst until that injection exists.
 2. Shared state for multi-instance deployments: rate limits, daily budget, concurrency gate and the report store
