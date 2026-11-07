@@ -5,7 +5,7 @@
 # Secrets are set with `fly secrets set` (never in this file): CIVICPULSE_API_PROXY_SECRET,
 # CIVICPULSE_AI_ACCESS_TOKEN, CIVICPULSE_ARTIFACT_SHA256 (+ CIVICPULSE_ARTIFACT_TOKEN only for a private URL).
 app = "civicpulse-api-staging"        # placeholder: must be unique on Fly.io
-primary_region = "ewr"                # Secaucus, NJ (closest region to the NYC data and the iad1 Vercel region)
+primary_region = "iad"                # Ashburn, VA: same metro as the Vercel iad1 function region (low proxy latency)
 
 [env]
   PORT = "8000"

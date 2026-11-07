@@ -41,6 +41,13 @@ from pathlib import Path
 from typing import Any
 
 MANIFEST_NAME = "ARTIFACT_MANIFEST.json"
+NOTICE_NAME = "DATA_NOTICE.md"
+# Columns removed from the published snapshot because nothing at runtime reads them and they add precision a
+# portfolio deployment does not need: building-level coordinates of residential complaints. Lineage is kept by
+# recording the source file's SHA-256 next to the redacted file's.
+REDACTED_COLUMNS: dict[str, tuple[str, ...]] = {
+    "processed/fact_service_requests.parquet": ("latitude", "longitude"),
+}
 SCHEMA_VERSION = 1
 CHUNK = 1 << 20
 DEFAULT_MAX_BYTES = 2 * 1024**3  # refuse archives larger than 2 GiB (the current snapshot is ~100 MB)
@@ -103,12 +110,70 @@ def describe(data_dir: Path) -> dict[str, Any]:
     }
 
 
-def build_manifest(data_dir: Path) -> dict[str, Any]:
-    data_dir = Path(data_dir)
-    files = [
-        {"path": rel.as_posix(), "bytes": (data_dir / rel).stat().st_size, "sha256": sha256_file(data_dir / rel)}
-        for rel in select_files(data_dir)
-    ]
+def _sql_path(path: Path) -> str:
+    return path.resolve().as_posix().replace("'", "''")
+
+
+def redacted_copy(src: Path, dst: Path, drop: tuple[str, ...]) -> list[str]:
+    """Write ``src`` without the ``drop`` columns (same row order, zstd). Returns the columns actually removed."""
+    import duckdb  # runtime dependency of the analytics package; imported lazily for the restore path
+
+    con = duckdb.connect(":memory:")
+    con.execute("SET threads=1")  # deterministic output for reproducible archives
+    con.execute("SET preserve_insertion_order=true")
+    cols = [r[0] for r in con.execute(f"DESCRIBE SELECT * FROM read_parquet('{_sql_path(src)}')").fetchall()]
+    keep = [c for c in cols if c not in drop]
+    select = ", ".join('"' + c.replace('"', '""') + '"' for c in keep)
+    con.execute(
+        f"COPY (SELECT {select} FROM read_parquet('{_sql_path(src)}')) TO '{_sql_path(dst)}' "
+        "(FORMAT parquet, COMPRESSION zstd)"
+    )
+    con.close()
+    return [c for c in cols if c in drop]
+
+
+def data_notice(data_dir: Path, snap: dict[str, Any], redactions: list[dict[str, Any]]) -> str:
+    """Source, version and modifications of the public data set (NYC Admin Code § 23-502(d))."""
+    from civicpulse_shared.config import load_ingestion_config
+
+    cfg = load_ingestion_config()
+    meta_file = Path(data_dir) / "state" / "source_metadata.json"
+    meta = _read_json(meta_file) if meta_file.is_file() else {}
+    build = _read_json(Path(data_dir) / "state" / "last_build.json")
+    cats = "; ".join(f"{c.label} ({', '.join(c.complaint_types)})" for c in cfg.categories)
+    removed = "; ".join(f"{r['path']}: {', '.join(r['dropped_columns'])}" for r in redactions) or "none"
+    return f"""# Data notice
+
+Source: {meta.get("name", "NYC 311 Service Requests")}, NYC Open Data data set `{cfg.source.dataset_id}`
+({cfg.source.base_url}/d/{cfg.source.dataset_id}), published by NYC 311 / Office of Technology and Innovation
+(attribution: "{meta.get("attribution", "311")}"). Borough boundaries shown by the application: NYC Department
+of City Planning, data set `gthc-hcne`.
+
+Version: source rows updated at {build.get("source_rows_updated_at")}; snapshot taken {build.get("snapshot_at_local")}
+(America/New_York); records created {snap.get("dataset_min_created_at")} to {snap.get("dataset_cutoff")}.
+This is a static snapshot, not live data.
+
+Modifications by CivicPulse AI: limited to the complaint types {cats}; created on or after the configured backfill
+start; deduplicated on unique_key (latest source version kept); normalised types, borough and status values;
+derived columns (durations, calendar parts, data-quality flags); aggregates and model outputs computed from the
+snapshot. Columns removed before publication: {removed}. Model outputs are statistical estimates; the
+closure-delay model is research-only and anomaly flags are unverified.
+
+The City of New York provides the source data as is, without warranty, and does not endorse this project.
+Snapshot id: {snap["build_id"]}__{snap["model_run_id"]}.
+"""
+
+
+def build_manifest(data_dir: Path, staged: dict[str, Path] | None = None) -> dict[str, Any]:
+    """Manifest of the snapshot. ``staged`` maps a relative path to the file actually published (redacted copy
+    or generated notice) when it differs from ``data_dir / path``."""
+    data_dir, staged = Path(data_dir), staged or {}
+    rels = [rel.as_posix() for rel in select_files(data_dir)]
+    rels += [p for p in staged if p not in rels]
+    files = []
+    for rel in sorted(rels):
+        src = staged.get(rel, data_dir / rel)
+        files.append({"path": rel, "bytes": src.stat().st_size, "sha256": sha256_file(src)})
     snap = describe(data_dir)
     return {
         "schema_version": SCHEMA_VERSION,
@@ -130,8 +195,28 @@ def pack(data_dir: Path, out_dir: Path) -> dict[str, Any]:
 
     The archive is byte-for-byte reproducible for the same inputs (sorted entries, fixed metadata, gzip mtime 0)."""
     data_dir, out_dir = Path(data_dir), Path(out_dir)
-    manifest = build_manifest(data_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=out_dir, prefix=".stage-") as stage_dir:
+        return _pack(data_dir, out_dir, Path(stage_dir))
+
+
+def _pack(data_dir: Path, out_dir: Path, stage: Path) -> dict[str, Any]:
+    select_files(data_dir)  # fail clearly on a missing required artifact before any staging work
+    staged: dict[str, Path] = {}
+    redactions = []
+    for rel, drop in REDACTED_COLUMNS.items():
+        src = data_dir / rel
+        if src.is_file():
+            dst = stage / f"redacted-{len(staged)}.parquet"
+            removed = redacted_copy(src, dst, drop)
+            if removed:
+                staged[rel] = dst
+                redactions.append({"path": rel, "dropped_columns": removed, "source_sha256": sha256_file(src)})
+    notice = stage / NOTICE_NAME
+    notice.write_text(data_notice(data_dir, describe(data_dir), redactions), encoding="utf-8", newline="\n")
+    staged[NOTICE_NAME] = notice
+    manifest = build_manifest(data_dir, staged)
+    manifest["redactions"] = redactions
     name = f"civicpulse-snapshot-{manifest['snapshot_id']}"
     archive = out_dir / f"{name}.tar.gz"
     tmp = archive.with_suffix(".tmp")
@@ -143,7 +228,7 @@ def pack(data_dir: Path, out_dir: Path) -> dict[str, Any]:
     ):
         tar.addfile(_tarinfo(MANIFEST_NAME, len(body)), io.BytesIO(body))
         for f in manifest["files"]:
-            with (data_dir / f["path"]).open("rb") as fh:
+            with staged.get(f["path"], data_dir / f["path"]).open("rb") as fh:
                 tar.addfile(_tarinfo(f["path"], f["bytes"]), fh)
     os.replace(tmp, archive)
     sidecar = {

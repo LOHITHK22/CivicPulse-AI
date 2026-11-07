@@ -9,6 +9,7 @@ import shutil
 import tarfile
 from pathlib import Path
 
+import duckdb
 import pytest
 
 from civicpulse_analytics import AnalyticsService
@@ -40,6 +41,11 @@ def test_manifest_identifies_data_and_models_together(packed, sample_models):
     runs = {p.split("/")[2] for p in paths if p.startswith("models/runs/")}
     assert runs == {side["model_run_id"]}  # only the active model run
     assert all(len(f["sha256"]) == 64 for f in side["files"])
+    assert art.NOTICE_NAME in paths
+    (red,) = side["redactions"]  # building-level coordinates are not published
+    assert red["path"] == "processed/fact_service_requests.parquet"
+    assert red["dropped_columns"] == ["latitude", "longitude"]
+    assert red["source_sha256"] == art.sha256_file(sample_models.root / red["path"])
 
 
 def test_pack_is_reproducible(packed, sample_models, tmp_path):
@@ -52,6 +58,11 @@ def test_restore_verifies_and_serves(packed, tmp_path):
     snap = art.restore(str(_archive(packed)), tmp_path, side["archive_sha256"])
     assert snap.name == side["snapshot_id"]
     assert art.verify(snap)["snapshot_id"] == side["snapshot_id"]
+    cols = duckdb.sql(f"DESCRIBE SELECT * FROM '{(snap / 'processed/fact_service_requests.parquet').as_posix()}'")
+    names = {r[0] for r in cols.fetchall()}
+    assert "latitude" not in names and "longitude" not in names and "incident_zip" in names
+    notice = (snap / art.NOTICE_NAME).read_text(encoding="utf-8")
+    assert "erm2-nwe9" in notice and "latitude, longitude" in notice and "not live" in notice
     health = AnalyticsService(snap).health()
     assert health["ready"] and health["fact_rows"] == side["fact_rows"]
     assert PredictionService(snap).registry()["run_id"] == side["model_run_id"]

@@ -23,7 +23,7 @@ packages/analytics  AnalyticsService (DuckDB in-memory views over Parquet, read-
    ▼                     ▲ (Milestone 3: MCP server will call the same service)
 services/api  FastAPI  /api/v1/*  (GET only, validation, rate limit, security headers)
    ▼
-apps/web  Next.js  — browser calls same-origin /api/v1/*, rewritten server-side to the API
+apps/web  Next.js  — browser calls same-origin /api/v1/*, proxied server-side to the API (route handlers)
 ```
 
 ## Architecture decision record (ADR-001: Milestone 1 foundation)

@@ -15,21 +15,46 @@ The repository excludes the warehouse and the trained models. Deployments get th
 Excluded: `raw/` ingestion pages (111 MB; not read at runtime) and inactive model runs. Data and models travel
 together: the snapshot id is `<build_id>__<model_run_id>`.
 
-## Current snapshot (packed 2026-11-06 from the local full warehouse)
+## Current snapshot (re-packed 2026-11-06 with redaction and notice; supersedes the first 85.7 MB pack)
 
 | Field | Value |
 |---|---|
 | snapshot_id | `20261104T194022Z-5da243__20261104T195715Z-27ea6f` |
 | archive | `civicpulse-snapshot-20261104T194022Z-5da243__20261104T195715Z-27ea6f.tar.gz` |
-| archive_bytes | 85,702,881 |
-| archive_sha256 | `9dc8ef01ecfbefd02b5dffc9139db4f9eda1c6d3f81829ea0178404746b1c9f3` |
-| files / unpacked | 39 files / 89,631,678 bytes, each with SHA-256 in the embedded `ARTIFACT_MANIFEST.json` |
+| archive_bytes | 68,952,849 |
+| archive_sha256 | `b18623fa88e4a327ddab90e9c9f5893e7aeebb545f6de139be451c7254c88238` (two independent packs gave identical bytes) |
+| files / unpacked | 40 files / 72,880,142 bytes, each with SHA-256 in the embedded `ARTIFACT_MANIFEST.json`, plus `DATA_NOTICE.md` |
 | fact_rows | 2,511,293 |
 | dataset range | 2023-01-01 00:00:42 → **2026-11-01 02:04:40** (cutoff; snapshot, not live) |
 | models | forecast, delay_risk, anomaly: all `*-20261104T195715Z-27ea6f` |
+| model ↔ data compatibility | model run manifest `data.build_id` = `20261104T194022Z-5da243` = warehouse build; `data.fact_sha256` = `5dd5799e…` = `redactions[0].source_sha256` (the models were trained on exactly this warehouse before redaction) |
 
-The archive is reproducible: the same inputs produce the same bytes and the same SHA-256 (tested). It is **not**
-published anywhere yet; uploading it needs your approval.
+The archive is **not published** anywhere. Uploading it needs your approval.
+
+## Content audit (2026-11-06)
+
+| Check | Result |
+|---|---|
+| Secrets | gitleaks over the extracted snapshot: no leaks. JSON state contains no tokens, e-mail addresses, user names or local paths. `raw_file` holds only `run=<id>/page-NNNNN.parquet`. |
+| Personal data | The source has no names, phone numbers or e-mail addresses. The ingestion never stored the incident address, street or BBL. |
+| Precise locations | `latitude`/`longitude` (building-level, 2.5 M residential complaints) were **in** the first pack. Nothing at runtime reads them, so they are now **removed** at pack time (`REDACTED_COLUMNS`). The remaining location fields are ZIP, community board, council district, precinct and borough. |
+| Free text | `descriptor` and `location_type` take 8 and 4 fixed city-defined values respectively; no resolution text or comments are stored. |
+| Prohibited/confidential data | None found. All rows derive from the public NYC Open Data release. Model outputs are aggregates or scores keyed by the public `unique_key`. |
+| Runtime after redaction | Health (2,511,293 rows), all 14 data endpoints, request detail, CSV export and an MCP investigation (`compare_boroughs`, 11 validated claims) all answer correctly on the restored redacted snapshot. |
+
+## Licence and attribution
+
+* **Terms.** The 311 data set (`erm2-nwe9`) carries no licence field in its portal metadata (`license: null`,
+  `attribution: "311"`, provenance official). Its terms come from NYC's Open Data Law. NYC Admin Code § 23-502(d)
+  requires public data sets to be available without registration, licence requirements or restrictions on use.
+  The City *may* require anyone republishing a data set to identify its source and version and describe any
+  modifications. Use is also subject to the NYC.gov Terms of Use, which provide the data as is.
+* **How we comply.** Every archive embeds `DATA_NOTICE.md`. It names the source data set and publisher, the
+  version (source update time, snapshot time and record range), every modification (category filter, window,
+  deduplication, derived columns, removed columns) and a no-warranty/no-endorsement statement. The UI already
+  attributes NYC Open Data `erm2-nwe9` (sidebar and About page) and DCP `gthc-hcne` (Geo explorer).
+* Not legal advice. Before a public launch, re-read the current NYC.gov Terms of Use page. Its text could not
+  be retrieved automatically.
 
 ## Workflow
 

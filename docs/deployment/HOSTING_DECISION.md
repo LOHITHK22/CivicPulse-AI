@@ -11,7 +11,7 @@ at 512 MB and 2 threads (`STAGING_VERIFICATION.md`):
 
 | Quantity | Measured |
 |---|---|
-| Snapshot archive (warehouse + state + active model run) | 85.7 MB (39 files, 89.6 MB unpacked) |
+| Snapshot archive (warehouse + state + active model run, coordinates removed) | 69.0 MB (40 files, 72.9 MB unpacked) |
 | API memory after warm-up + one investigation | 230 MiB |
 | API memory, peak during 3 investigations (MCP subprocess each) + CSV export | **373 MiB** |
 | Web (Next.js) memory | 85 MiB |
@@ -39,7 +39,7 @@ over the 373 MiB peak) and ~100 MB of local disk. No database server, queue, GPU
 
 ## Decision
 
-**Frontend: Vercel Hobby. Backend: one Fly.io `shared-cpu-1x` machine with 1 GB in `ewr`. Data and models: the
+**Frontend: Vercel Hobby. Backend: one Fly.io `shared-cpu-1x` machine with 1 GB in `iad`. Data and models: the
 pinned snapshot archive as a GitHub Release asset, with Cloudflare R2 as the private alternative.**
 
 * **Why Vercel for the web app.** Next.js runs there natively with HTTPS, preview deployments and instant
@@ -64,12 +64,26 @@ frontend would be ours to manage. The chosen split exposes the API URL publicly,
 **proxy-only mode**: every `/api/*` request must carry the proxy secret, and docs and schema are disabled. A
 public URL is therefore not an open API.
 
+## Recheck (2026-11-06, release preparation)
+
+* **Fly.io.** shared-cpu-1x with 1 GB is about **$6.70/month** (RAM $6/GB-month since 2026-10-01; older pages say
+  $5.70). There is **no confirmed hard spending cap**: staff forum replies say billing cannot be limited to $0,
+  and a prepaid balance rolls over into normal billing. Budget or alert features could not be confirmed in
+  Fly's own docs. Cost is bounded by configuration instead: one machine, `--ha=false`, a fixed 1 GB VM and
+  auto-stop. The proposed config fits: the 373 MiB peak sits under 1 GB, one instance matches the process-local
+  limits, and the HTTP check is `/health/ready` with a 60 s grace period. The region was changed to `iad`
+  (same metro as Vercel `iad1`).
+* **Vercel Hobby.** Officially restricted to non-commercial personal use; commercial use needs Pro. A personal
+  portfolio that earns no money and serves no client fits, according to Vercel community answers, which are
+  not an official ruling. A portfolio tied to paid client work would not fit. Functions default to 10 s, and the
+  proxy sets `maxDuration = 60` (the Hobby maximum).
+
 ## Sources
 
 [Render compute plans](https://render.com/docs/compute-plans) · [Render pricing](https://render.com/pricing) ·
 [Fly.io pricing](https://fly.io/docs/about/pricing/) · [Fly.io cost management](https://fly.io/docs/about/cost-management/) ·
 [Railway pricing](https://docs.railway.com/pricing) · [Railway plans](https://docs.railway.com/pricing/plans) ·
-[Vercel Hobby plan](https://vercel.com/docs/plans/hobby) · [Cloudflare R2 pricing](https://developers.cloudflare.com/r2/pricing) ·
+[Vercel Hobby plan](https://vercel.com/docs/plans/hobby) · [Cloudflare R2 pricing](https://developers.cloudflare.com/r2/pricing) · [Vercel fair use](https://vercel.com/docs/limits/fair-use-guidelines) · [Fly community: billing limit](https://community.fly.io/t/can-i-set-a-billing-limit-per-month/714) ·
 third-party summaries used only where marked *(verify)*: [temps.sh Fly.io 2026](https://temps.sh/blog/fly-io-pricing-2026),
 [budgetforge Fly.io 2026](https://www.budgetforge.dev/tools/fly-io-pricing-2026), [livemy.app Render](https://livemy.app/blog/render-pricing),
 [activepieces Railway 2026](https://www.activepieces.com/blog/railway-pricing-2026-plans-usage-rates-and-costs).

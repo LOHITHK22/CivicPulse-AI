@@ -15,7 +15,7 @@ same images and the same wiring as `deploy/fly.staging.toml`:
 
 | Area | Check | Result |
 |---|---|---|
-| Artifacts | first boot: restore + deep verify of the 85.7 MB archive inside the container | PASS, 3.75 s |
+| Artifacts | first boot: restore + deep verify of the first (85.7 MB, unredacted) archive inside the container | PASS, 3.75 s |
 | | restart: snapshot reused, not re-copied | PASS, 0.0 s |
 | | wrong pinned SHA-256 → container exits 2, `startup_failed` log | PASS |
 | | `CIVICPULSE_REQUIRE_ARTIFACT=true` without a URL → exits 2 | PASS |
@@ -47,12 +47,19 @@ same images and the same wiring as `deploy/fly.staging.toml`:
 | | web memory | 85 MiB |
 | | container start → healthy (healthcheck-interval bound) / restore → app ready | 16.4 s / 2.8 s |
 
+## Redacted snapshot (2026-11-06, release preparation)
+
+The archive was re-packed without coordinates (69.0 MB, SHA `b18623fa…`). It was restored and deep-verified
+locally, then checked with the API in-process on the restored copy: health 2,511,293 rows; 14 data endpoints,
+request detail, CSV export: 200; MCP investigation answered with 11 validated claims; paid AI off. The Docker
+run above used the earlier unredacted archive. The image is unchanged, so it was not re-run.
+
 ## Not verified (needs real staging)
 
 * Real HTTPS, Fly.io health checks, auto-stop cold starts and download from the real artifact URL.
 * `CIVICPULSE_CLIENT_IP_HEADER` on Vercel: confirm `x-vercel-forwarded-for` carries the browser address and is
   not client-controlled.
-* Vercel function timeout and region latency to `ewr`.
+* Vercel function timeout and region latency between Vercel `iad1` and Fly.io `iad`.
 * External run of `scripts/staging_check.py` (unit-tested only).
 
 ## When staging exists

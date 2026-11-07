@@ -202,4 +202,4 @@ AI: [AI readiness audit](docs/evaluation/AI_READINESS_AUDIT.md) · [Agent evalua
 Deployment (M5): [Hosting decision](docs/deployment/HOSTING_DECISION.md) · [Cost](docs/deployment/COST_ESTIMATE.md) ·
 [Architecture](docs/deployment/ARCHITECTURE.md) · [Artifacts](docs/deployment/ARTIFACT_MANIFEST.md) ·
 [Environment](docs/deployment/ENVIRONMENT_VARIABLES.md) · [Staging verification](docs/deployment/STAGING_VERIFICATION.md) ·
-[Production checklist](docs/deployment/PRODUCTION_CHECKLIST.md) · [Rollback](docs/deployment/ROLLBACK.md)
+[Production checklist](docs/deployment/PRODUCTION_CHECKLIST.md) · [Platform setup](docs/deployment/PLATFORM_SETUP.md) · [Rollback](docs/deployment/ROLLBACK.md)

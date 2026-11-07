@@ -9,7 +9,7 @@ approved account, payment card and snapshot publication. Milestones 1–4 are me
 | Capability | Status | Evidence |
 |---|---|---|
 | Hosting decision and cost (Vercel Hobby + one Fly.io 1 GB machine; ≈ $0–3 staging, ≈ $7–8 production) | Researched, **not provisioned** | `docs/deployment/HOSTING_DECISION.md`, `COST_ESTIMATE.md` |
-| Snapshot artifacts (pack, SHA-256 manifest, pinned restore, safe extraction, atomic install, reuse) | Implemented, tested; full snapshot packed locally (85.7 MB), **not published** | `docs/deployment/ARTIFACT_MANIFEST.md`, `tests/test_artifacts.py` |
+| Snapshot artifacts (pack, SHA-256 manifest, pinned restore, safe extraction, atomic install, reuse) | Implemented, tested; full snapshot packed locally (69.0 MB, coordinates removed, data notice embedded), **not published** | `docs/deployment/ARTIFACT_MANIFEST.md`, `tests/test_artifacts.py` |
 | Container entrypoint (restore, fail closed, 1 worker, concurrency cap, graceful shutdown, non-root) | Implemented, tested | `services/api/start.py`, `services/api/tests/test_start.py` |
 | Server-side Next.js proxy (token injection, proxy secret, client address, credential stripping) | Implemented, tested | `apps/web/lib/server/proxy.ts`, `proxy.test.ts` |
 | Proxy-only API mode; client attribution and report ownership behind the proxy | Implemented, tested | `services/api/tests/test_api_proxy.py` |
