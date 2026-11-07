@@ -1,4 +1,4 @@
-# Local stack: API + web. VERIFIED 2026-11-04 (Docker 27.5.1): both images build, API healthy, all pages 200 via the web proxy.
+# Local stack: API + web. VERIFIED 2026-11-06 (Docker 27.5.1); see docs/deployment/STAGING_VERIFICATION.md.
 #   docker compose up --build            -> serves the bundled real-data sample (3,785 records, smoke-scale models)
 #   CIVICPULSE_DATA_DIR=/app/data docker compose up --build
 #                                         -> serves your local full snapshot from ./data (read-only)
@@ -15,6 +15,14 @@ services:
       CIVICPULSE_LLM_PROVIDER: ${CIVICPULSE_LLM_PROVIDER:-fake}
       CIVICPULSE_LLM_MODEL: ${CIVICPULSE_LLM_MODEL:-deterministic-fake-v1}
       CIVICPULSE_OPENAI_API_KEY: ${CIVICPULSE_OPENAI_API_KEY:-}
+      # Deployment controls (all optional locally; see docs/deployment/ENVIRONMENT_VARIABLES.md).
+      CIVICPULSE_API_PROXY_SECRET: ${CIVICPULSE_PROXY_SECRET:-}
+      CIVICPULSE_API_REQUIRE_PROXY_AUTH: ${CIVICPULSE_API_REQUIRE_PROXY_AUTH:-false}
+      CIVICPULSE_AI_ACCESS_TOKEN: ${CIVICPULSE_AI_ACCESS_TOKEN:-}
+      CIVICPULSE_ARTIFACT_URL: ${CIVICPULSE_ARTIFACT_URL:-}
+      CIVICPULSE_ARTIFACT_SHA256: ${CIVICPULSE_ARTIFACT_SHA256:-}
+      CIVICPULSE_DUCKDB_MEMORY_LIMIT: ${CIVICPULSE_DUCKDB_MEMORY_LIMIT:-}
+      CIVICPULSE_DUCKDB_THREADS: ${CIVICPULSE_DUCKDB_THREADS:-}
     volumes:
       - ./data:/app/data:ro
     # Not published to the host: the browser reaches the API only through the web service.
@@ -23,8 +31,12 @@ services:
   web:
     build:
       context: apps/web
-      args:
-        API_BASE_URL: http://api:8000
+    environment:
+      # Server-side only: read by the app/api route handlers, never sent to the browser.
+      API_BASE_URL: http://api:8000
+      CIVICPULSE_PROXY_SECRET: ${CIVICPULSE_PROXY_SECRET:-}
+      CIVICPULSE_AI_ACCESS_TOKEN: ${CIVICPULSE_AI_ACCESS_TOKEN:-}
+      CIVICPULSE_CLIENT_IP_HEADER: ${CIVICPULSE_CLIENT_IP_HEADER:-}
     ports:
       - "3000:3000"
     depends_on:
