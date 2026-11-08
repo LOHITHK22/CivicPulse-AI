@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
-// The browser only ever talks to this Next.js origin. /api/v1/* is proxied server-side to the
-// FastAPI service, so no API URL or credential is shipped in the client bundle and CORS is not
-// needed in production. API_BASE_URL is read at build/start time on the server only.
-const API_BASE_URL = process.env.API_BASE_URL ?? "http://127.0.0.1:8000";
+// The browser only ever talks to this Next.js origin. /api/v1/* and /api/health/ready are served by
+// route handlers (app/api/**) that proxy server-side to FastAPI and attach secrets on the server, so
+// no API URL or credential is shipped in the client bundle and CORS is not needed in production.
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
@@ -17,12 +16,6 @@ const nextConfig: NextConfig = {
       },
     },
   },
-  async rewrites() {
-    return [
-      { source: "/api/v1/:path*", destination: `${API_BASE_URL}/api/v1/:path*` },
-      { source: "/api/health/ready", destination: `${API_BASE_URL}/health/ready` },
-    ];
-  },
   async headers() {
     return [
       {
@@ -32,6 +25,13 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          // HTTPS-only once served over TLS (ignored by browsers on plain-HTTP localhost).
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+          // Directives that need no script nonces; a full script-src policy is a documented follow-up.
+          {
+            key: "Content-Security-Policy",
+            value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
+          },
         ],
       },
     ];

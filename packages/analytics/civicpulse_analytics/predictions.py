@@ -15,8 +15,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-import duckdb
-
 from civicpulse_analytics.service import DataUnavailableError
 from civicpulse_shared.paths import read_json
 
@@ -55,7 +53,9 @@ def _clean(v: Any) -> Any:
 class PredictionService:
     def __init__(self, data_dir: Path) -> None:
         self.root = Path(data_dir) / "models"
-        self._con = duckdb.connect(":memory:")
+        from civicpulse_analytics.service import connect_duckdb
+
+        self._con = connect_duckdb()
         self._lock = threading.Lock()
         self._run_id: str | None = None
         self._json_cache: dict[str, Any] = {}

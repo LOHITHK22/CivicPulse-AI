@@ -23,7 +23,7 @@ packages/analytics  AnalyticsService (DuckDB in-memory views over Parquet, read-
    ▼                     ▲ (Milestone 3: MCP server will call the same service)
 services/api  FastAPI  /api/v1/*  (GET only, validation, rate limit, security headers)
    ▼
-apps/web  Next.js  — browser calls same-origin /api/v1/*, rewritten server-side to the API
+apps/web  Next.js  — browser calls same-origin /api/v1/*, proxied server-side to the API (route handlers)
 ```
 
 ## Architecture decision record (ADR-001: Milestone 1 foundation)
@@ -44,7 +44,7 @@ per year of the two categories in scope.
 | 4 | **Incremental = `:updated_at > watermark − 72 h`** | `created_date`-only increments | Catches late closures and status changes. The cost (bulk re-fetches) was measured and documented. |
 | 5 | **Reject vs flag**: structural failures are quarantined; plausibility problems are kept and flagged | Drop all suspect rows | Keeps counts honest (39–41 bad closures shouldn't remove the requests themselves) while excluding bad values from the affected measure. |
 | 6 | **One analytics service layer** shared by the API (and later MCP) | Separate SQL in each interface | Metric definitions live in one place, which keeps them consistent and grounded. |
-| 7 | **Browser → Next.js → API via rewrites** | Browser calls API directly with CORS | No API URL in the client bundle. The API can stay private. Same-origin. |
+| 7 | **Browser → Next.js → API via a server-side proxy** (rewrites until M4; route handlers since M5) | Browser calls API directly with CORS | No API URL or credential in the client bundle. Same-origin. Since M5 the proxy attaches the proxy secret, AI token and client address on the server (`docs/deployment/ARCHITECTURE.md`). |
 | 8 | **No Kafka, Airflow, Redis, Kubernetes or vector DB** | | Not needed at this scale. A rate limiter and cache in the process are enough for a single instance. |
 | 9 | **Python 3.12, pinned lower bounds; latest releases tested** | Pin older majors | DuckDB 2.0, Polars 2.1 and Next 16.4 were tested end to end in this environment. |
 

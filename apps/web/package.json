@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:unit": "node --experimental-strip-types --no-warnings=ExperimentalWarning --test lib/analyst.test.ts"
+    "test:unit": "node --experimental-strip-types --no-warnings=ExperimentalWarning --test lib/analyst.test.ts lib/server/proxy.test.ts"
   },
   "dependencies": {
     "maplibre-gl": "6.15.0",

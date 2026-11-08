@@ -4,7 +4,7 @@
 
 ```text
 Browser (Next.js /analyst)
-   │  POST /api/v1/ai/investigations   (same-origin via the Next.js rewrite; JSON, ≤ 8 KB)
+   │  POST /api/v1/ai/investigations   (same-origin via the Next.js server proxy; JSON, ≤ 8 KB)
    ▼
 FastAPI (services/api)  ── guard: POST allowed on this one path only, Origin check, Content-Type,
    │                        Content-Length, optional bearer token, per-client + daily + cost limits
